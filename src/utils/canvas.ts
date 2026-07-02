@@ -67,6 +67,68 @@ function roundRect(c: CanvasRenderingContext2D, x: number, y: number, w: number,
   c.closePath()
 }
 
+/**
+ * 卡片绘制辅助：根据 config.shadow 决定绘制方式
+ * - shadow=true：三层渐进阴影（blur 大→小、alpha 小→大）→ 柔和高级感
+ * - shadow=false：单色矩形填充
+ *
+ * 返回 { cardX, cardY, cardW, cardH } 表示卡片实际区域（含阴影时的内缩）
+ */
+function drawCard(
+  c: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  config: TemplateConfig,
+  long: number,
+): { cardX: number; cardY: number; cardW: number; cardH: number } {
+  if (config.shadow) {
+    const blur = Math.round(long * 0.04)          // 4% 长边 → 更强的模糊
+    const spread = Math.round(blur * 0.4)         // 阴影外扩
+    c.save()
+    // 第 1 层：大范围柔和（模拟环境光）
+    c.shadowColor = 'rgba(28, 25, 23, 0.08)'
+    c.shadowBlur = blur * 1.5
+    c.shadowOffsetY = blur * 0.6
+    c.fillStyle = config.bgColor
+    roundRect(c, spread, spread, canvas.width - spread * 2, canvas.height - spread * 2, config.radius)
+    c.fill()
+    c.restore()
+
+    c.save()
+    // 第 2 层：中等模糊（过渡）
+    c.shadowColor = 'rgba(28, 25, 23, 0.12)'
+    c.shadowBlur = blur * 0.8
+    c.shadowOffsetY = blur * 0.3
+    c.fillStyle = config.bgColor
+    roundRect(c, spread, spread, canvas.width - spread * 2, canvas.height - spread * 2, config.radius)
+    c.fill()
+    c.restore()
+
+    c.save()
+    // 第 3 层：小范围锐利（近接触阴影）
+    c.shadowColor = 'rgba(28, 25, 23, 0.15)'
+    c.shadowBlur = blur * 0.3
+    c.shadowOffsetY = blur * 0.1
+    c.fillStyle = config.bgColor
+    roundRect(c, spread, spread, canvas.width - spread * 2, canvas.height - spread * 2, config.radius)
+    c.fill()
+    c.restore()
+
+    // 实际卡片位置（内缩 spread）
+    return {
+      cardX: spread,
+      cardY: spread,
+      cardW: canvas.width - spread * 2,
+      cardH: canvas.height - spread * 2,
+    }
+  }
+
+  // 无阴影：直接填充
+  c.fillStyle = config.bgColor
+  roundRect(c, 0, 0, canvas.width, canvas.height, config.radius)
+  c.fill()
+  return { cardX: 0, cardY: 0, cardW: canvas.width, cardH: canvas.height }
+}
+
 /** 拼装 EXIF 主要参数字符串 */
 function formatExifLine(exif: ExifData): string {
   const parts: string[] = []
@@ -86,16 +148,21 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
   const long = Math.max(W, H)
   const pad = Math.round(long * config.padding / 100)
   const bottomExtra = Math.round(long * 0.06)
+  const spread = config.shadow ? Math.round(long * 0.04 * 0.4) : 0
 
   const canvas = document.createElement('canvas')
-  canvas.width = W + pad * 2
-  canvas.height = H + pad * 2 + bottomExtra
+  canvas.width = W + pad * 2 + spread * 2
+  canvas.height = H + pad * 2 + bottomExtra + spread * 2
   const c = canvas.getContext('2d')!
 
-  c.fillStyle = config.bgColor
+  // 画布背景（阴影外围区域）
+  c.fillStyle = '#f5f5f4'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
-  c.drawImage(image, pad, pad, W, H)
+  // 卡片 + 三层阴影
+  const { cardX, cardY } = drawCard(c, canvas, config, long)
+
+  c.drawImage(image, cardX + pad, cardY + pad, W, H)
 
   // 底部文字
   const fontPx = Math.round(long * config.fontSize / 100)
@@ -103,7 +170,7 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
   c.font = `500 ${fontPx}px ${FONT_UI}`
   c.textBaseline = 'middle'
 
-  const centerY = pad + H + bottomExtra / 2
+  const centerY = cardY + pad + H + bottomExtra / 2
   const line = config.customText || [exif.model, formatExifLine(exif)].filter(Boolean).join('  ·  ')
   if (line) {
     c.textAlign = 'center'
@@ -114,7 +181,7 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
   if (config.showLogo && logo) {
     const lh = Math.round(long * config.logoSize / 100)
     const lw = lh * (logo.width / logo.height)
-    c.drawImage(logo, pad, centerY - lh / 2, lw, lh)
+    c.drawImage(logo, cardX + pad, centerY - lh / 2, lw, lh)
   }
 
   return canvas
@@ -127,17 +194,21 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
   const sidePad = Math.round(long * config.padding / 100)
   const bottomPad = Math.round(long * config.padding / 100 * 3) // 底部约 3x
+  const spread = config.shadow ? Math.round(long * 0.04 * 0.4) : 0
 
   const canvas = document.createElement('canvas')
-  canvas.width = W + sidePad * 2
-  canvas.height = H + sidePad + bottomPad
+  canvas.width = W + sidePad * 2 + spread * 2
+  canvas.height = H + sidePad + bottomPad + spread * 2
   const c = canvas.getContext('2d')!
 
-  c.fillStyle = config.bgColor
+  c.fillStyle = '#f5f5f4'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
+  // 卡片 + 三层阴影
+  const { cardX, cardY } = drawCard(c, canvas, config, long)
+
   // 图像内部轻微内阴影感（微暗底色）
-  c.drawImage(image, sidePad, sidePad, W, H)
+  c.drawImage(image, cardX + sidePad, cardY + sidePad, W, H)
 
   // 底部签名文字
   const fontPx = Math.round(long * config.fontSize / 100)
@@ -146,7 +217,7 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.textAlign = 'center'
   c.textBaseline = 'middle'
   const line = config.customText || exif.dateTaken || ''
-  if (line) c.fillText(line, canvas.width / 2, sidePad + H + bottomPad / 2)
+  if (line) c.fillText(line, canvas.width / 2, cardY + sidePad + H + bottomPad / 2)
 
   return canvas
 }
@@ -288,36 +359,23 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   const W = image.width, H = image.height, long = Math.max(W, H)
   const pad = Math.round(long * config.padding / 100)
   const bottomExtra = Math.round(long * 0.09)
-  const shadow = config.shadow ? Math.round(long * 0.02) : 0
+  const spread = config.shadow ? Math.round(long * 0.04 * 0.4) : 0
 
   const canvas = document.createElement('canvas')
-  canvas.width = W + pad * 2 + shadow * 2
-  canvas.height = H + pad * 2 + bottomExtra + shadow * 2
+  canvas.width = W + pad * 2 + spread * 2
+  canvas.height = H + pad * 2 + bottomExtra + spread * 2
   const c = canvas.getContext('2d')!
 
   // 全画布背景（半透明遮罩）
   c.fillStyle = '#f2f4f8'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
-  // 卡片阴影
-  if (shadow > 0) {
-    c.save()
-    c.shadowColor = 'rgba(0,0,0,0.15)'
-    c.shadowBlur = shadow
-    c.shadowOffsetY = shadow / 2
-    c.fillStyle = config.bgColor
-    roundRect(c, shadow, shadow, canvas.width - shadow * 2, canvas.height - shadow * 2, config.radius)
-    c.fill()
-    c.restore()
-  } else {
-    c.fillStyle = config.bgColor
-    roundRect(c, 0, 0, canvas.width, canvas.height, config.radius)
-    c.fill()
-  }
+  // 卡片 + 三层阴影
+  const { cardX, cardY } = drawCard(c, canvas, config, long)
 
   // 图像圆角剪裁
-  const imgX = pad + shadow
-  const imgY = pad + shadow
+  const imgX = cardX + pad
+  const imgY = cardY + pad
   c.save()
   roundRect(c, imgX, imgY, W, H, Math.max(0, config.radius - pad * 0.3))
   c.clip()
@@ -339,10 +397,10 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   }
   c.fillStyle = config.textColor
   c.textAlign = 'left'
-  c.font = `600 ${Math.round(fontPx * 1.1)}px ${FONT_UI}`
+  c.font = `500 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
   const title = config.customText || exif.model || ''
   if (title) c.fillText(title, leftX, centerY - fontPx * 0.5)
-  c.fillStyle = 'rgba(0,0,0,0.5)'
+  c.fillStyle = 'rgba(0,0,0,0.55)'
   c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
   const sub = formatExifLine(exif) || (exif.dateTaken ?? '')
   if (sub) c.fillText(sub, leftX, centerY + fontPx * 0.6)
@@ -529,21 +587,27 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   const sidePad = Math.round(long * config.padding / 100)
   const topPad = Math.round(sidePad * 0.8)
   const bottomPad = Math.round(sidePad * 3.5)
+  const spread = config.shadow ? Math.round(long * 0.04 * 0.4) : 0
 
   const canvas = document.createElement('canvas')
-  canvas.width = W + sidePad * 2
-  canvas.height = H + topPad + bottomPad
+  canvas.width = W + sidePad * 2 + spread * 2
+  canvas.height = H + topPad + bottomPad + spread * 2
   const c = canvas.getContext('2d')!
 
   // 米白底 + 微弱纸张纹理
-  c.fillStyle = config.bgColor
+  c.fillStyle = '#f5f5f4'
   c.fillRect(0, 0, canvas.width, canvas.height)
-  const grain = c.createLinearGradient(0, 0, canvas.width, canvas.height)
+
+  // 卡片 + 三层阴影
+  const { cardX, cardY, cardW, cardH } = drawCard(c, canvas, config, long)
+
+  // 卡片内部纸张纹理（弱渐变）
+  const grain = c.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH)
   grain.addColorStop(0, 'rgba(0,0,0,0.015)')
   grain.addColorStop(0.5, 'rgba(0,0,0,0)')
   grain.addColorStop(1, 'rgba(0,0,0,0.02)')
   c.fillStyle = grain
-  c.fillRect(0, 0, canvas.width, canvas.height)
+  c.fillRect(cardX, cardY, cardW, cardH)
 
   // 图像区域（轻微阴影）
   c.save()
@@ -551,9 +615,9 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.shadowBlur = sidePad * 0.3
   c.shadowOffsetY = sidePad * 0.1
   c.fillStyle = '#000'
-  c.fillRect(sidePad, topPad, W, H)
+  c.fillRect(cardX + sidePad, cardY + topPad, W, H)
   c.restore()
-  c.drawImage(image, sidePad, topPad, W, H)
+  c.drawImage(image, cardX + sidePad, cardY + topPad, W, H)
 
   // 底部手写签名
   const fontPx = Math.round(long * config.fontSize / 100)
@@ -563,7 +627,7 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.textBaseline = 'middle'
   const signature = config.customText || ''
   if (signature) {
-    c.fillText(signature, sidePad * 1.2, topPad + H + bottomPad * 0.55)
+    c.fillText(signature, cardX + sidePad * 1.2, cardY + topPad + H + bottomPad * 0.55)
   }
 
   // 右下角日期小字
@@ -572,7 +636,7 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
     c.font = `300 ${smallFont}px ${FONT_UI}`
     c.fillStyle = 'rgba(0,0,0,0.5)'
     c.textAlign = 'right'
-    c.fillText(exif.dateTaken, canvas.width - sidePad * 1.2, canvas.height - sidePad * 0.8)
+    c.fillText(exif.dateTaken, cardX + cardW - sidePad * 1.2, cardY + cardH - sidePad * 0.8)
   }
 
   return canvas
@@ -586,37 +650,19 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
   const pad = Math.round(long * config.padding / 100)
   const topArea = Math.round(long * 0.08)
   const bottomArea = Math.round(long * 0.12)
-  const shadow = config.shadow ? Math.round(long * 0.025) : 0
+  const spread = config.shadow ? Math.round(long * 0.04 * 0.4) : 0
 
   const canvas = document.createElement('canvas')
-  canvas.width = W + pad * 2 + shadow * 2
-  canvas.height = H + pad * 2 + topArea + bottomArea + shadow * 2
+  canvas.width = W + pad * 2 + spread * 2
+  canvas.height = H + pad * 2 + topArea + bottomArea + spread * 2
   const c = canvas.getContext('2d')!
 
   // 画布背景
   c.fillStyle = '#fafafa'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
-  const cardX = shadow
-  const cardY = shadow
-  const cardW = canvas.width - shadow * 2
-  const cardH = canvas.height - shadow * 2
-
-  // 卡片 + 阴影
-  if (shadow > 0) {
-    c.save()
-    c.shadowColor = 'rgba(0,0,0,0.12)'
-    c.shadowBlur = shadow
-    c.shadowOffsetY = shadow / 2
-    c.fillStyle = config.bgColor
-    roundRect(c, cardX, cardY, cardW, cardH, config.radius)
-    c.fill()
-    c.restore()
-  } else {
-    c.fillStyle = config.bgColor
-    roundRect(c, cardX, cardY, cardW, cardH, config.radius)
-    c.fill()
-  }
+  // 卡片 + 三层阴影
+  const { cardX, cardY, cardW, cardH } = drawCard(c, canvas, config, long)
 
   // 顶部小标签（"小红书 · 图文")
   const fontPx = Math.round(long * config.fontSize / 100)

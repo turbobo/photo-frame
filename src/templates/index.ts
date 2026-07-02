@@ -54,9 +54,9 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
   }
   switch (id) {
     case 'minimal':
-      return { ...base, padding: 3, bgColor: '#ffffff', textColor: '#333' }
+      return { ...base, padding: 3, bgColor: '#ffffff', textColor: '#333', shadow: true }
     case 'polaroid':
-      return { ...base, padding: 6, bgColor: '#fefdf7', textColor: '#333', fontSize: 2.5, showLogo: false, showExif: false }
+      return { ...base, padding: 6, bgColor: '#fefdf7', textColor: '#333', fontSize: 2.5, showLogo: false, showExif: false, shadow: true }
     case 'film':
       return { ...base, padding: 8, bgColor: '#0a0a0a', textColor: '#e5e5e5', showLogo: false, fontSize: 1.6 }
     case 'exif':
@@ -70,7 +70,7 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
     case 'dazz':
       return { ...base, padding: 10, bgColor: '#0a0a0a', textColor: '#ffcc33', showLogo: false, fontSize: 1.6 }
     case 'instax':
-      return { ...base, padding: 6, bgColor: '#fefdf7', textColor: '#333', fontSize: 2.8, showLogo: false, showExif: false }
+      return { ...base, padding: 6, bgColor: '#fefdf7', textColor: '#333', fontSize: 2.8, showLogo: false, showExif: false, shadow: true }
     case 'xhs':
       return { ...base, padding: 4, bgColor: '#ffffff', textColor: '#1a1a1a', radius: 12, shadow: true, fontSize: 2.2 }
     case 'vintage':
