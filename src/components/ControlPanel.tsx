@@ -256,23 +256,18 @@ function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: 
         return (
           <div key={group.id}>
             <p className="font-caption text-text-3 mb-2">{group.name}</p>
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-2 gap-2">
               {items.map(t => (
                 <button
                   key={t.id}
                   onClick={() => onSelect(t.id)}
-                  className={`relative aspect-square rounded-md border transition-all duration-fast group
+                  className={`relative rounded-lg border transition-all duration-fast group overflow-hidden
                     ${selectedId === t.id
-                      ? 'border-accent bg-surface shadow-card'
-                      : 'border-border bg-canvas hover:border-text-3'
+                      ? 'border-accent bg-surface shadow-card ring-2 ring-accent/10'
+                      : 'border-border bg-surface hover:border-text-3 hover:shadow-card'
                     }`}
                   title={t.name + ' · ' + t.desc}>
-                  <TemplateThumb id={t.id} />
-                  <div className="absolute inset-x-0 bottom-0 text-[9px] py-0.5 text-center truncate bg-white/80 backdrop-blur">
-                    <span className={selectedId === t.id ? 'text-text font-medium' : 'text-text-2'}>
-                      {t.name}
-                    </span>
-                  </div>
+                  <TemplateThumb id={t.id} selected={selectedId === t.id} />
                 </button>
               ))}
             </div>
@@ -283,38 +278,192 @@ function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: 
   )
 }
 
-// Minimalist thumbnail — stylized abstract illustration of each template
-function TemplateThumb({ id }: { id: string }) {
-  const common = 'absolute inset-0 flex items-center justify-center'
+// Template thumbnail — larger preview area + embedded name + hint
+function TemplateThumb({ id, selected }: { id: string; selected: boolean }) {
+  const meta: Record<string, { name: string; hint: string }> = {
+    minimal:  { name: '极简',     hint: '白/黑边 + 底部小字' },
+    polaroid: { name: '拍立得',   hint: '经典上下等宽白边' },
+    film:     { name: '胶片',     hint: '黑框齿孔 + 编号' },
+    exif:     { name: '参数栏',   hint: 'Logo + 光圈快门 ISO' },
+    insta:    { name: '社交卡片', hint: '毛玻璃 + 圆角 + 阴影' },
+    leica:    { name: '徕卡栏',   hint: '底部黑栏 + 红点 + 型号' },
+    'red-dot':{ name: '红点水印', hint: '右下角悬浮红点 + 参数' },
+    dazz:     { name: 'Dazz 胶卷',hint: '135 胶卷边框 + 日期印字' },
+    instax:   { name: 'Instax',   hint: '真实拍立得比例 + 大留白' },
+    xhs:      { name: '小红书',   hint: '3:4 白底卡片 + 标题描述' },
+    vintage:  { name: '复古纸相框', hint: '牛皮纸纹理 + 做旧边' },
+    magazine: { name: '杂志封面', hint: '顶部大标题 + 底部 caption' },
+    location: { name: '地理水印', hint: 'Logo + 型号 + 📍地名' },
+  }
+  const m = meta[id] || { name: id, hint: '' }
+
+  return (
+    <div className="flex flex-col">
+      {/* Preview area (4:3 aspect) */}
+      <div className="aspect-[4/3] w-full relative flex items-center justify-center bg-canvas-soft">
+        <TemplatePreview id={id} />
+      </div>
+      {/* Name + hint */}
+      <div className="px-2 py-1.5 bg-surface">
+        <div className={`text-[11px] font-medium truncate ${selected ? 'text-text' : 'text-text-2'}`}>
+          {m.name}
+        </div>
+        <div className="text-[9px] text-text-3 truncate leading-tight">
+          {m.hint}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Pure visual preview of each template (no labels, just the aesthetic)
+function TemplatePreview({ id }: { id: string }) {
+  // 模拟照片：渐变色块
+  const photo = 'w-8 h-6 rounded-sm'
+  const photoGradient = 'background:linear-gradient(135deg,#f59e0b 0%,#ec4899 50%,#8b5cf6 100%)'
   switch (id) {
     case 'minimal':
-      return <div className={common}><div className="w-6 h-4 bg-border rounded-sm"/></div>
+      return (
+        <div className="w-11 h-10 bg-white rounded-sm relative flex items-center justify-center shadow-sm">
+          <div className={photo} style={{ background: photoGradient }}/>
+          <div className="absolute bottom-0.5 left-0.5 right-0.5 h-1 flex items-center justify-center">
+            <div className="text-[3px] text-text-3 font-mono">NIKON · f/4 · 1/320</div>
+          </div>
+        </div>
+      )
     case 'polaroid':
-      return <div className={common}><div className="w-5 h-6 bg-white border border-border rounded-sm"><div className="w-3 h-3 bg-border mt-1 mx-auto"/></div></div>
+      return (
+        <div className="w-9 h-11 bg-white rounded-sm flex flex-col shadow-sm">
+          <div className="mx-1 mt-1 w-7 h-6" style={{ background: photoGradient }}/>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-[4px] text-text-3 font-hand italic">signature</div>
+          </div>
+        </div>
+      )
     case 'film':
-      return <div className={common}><div className="w-7 h-5 bg-black rounded-sm relative"><div className="absolute inset-x-0 top-0.5 h-0.5 bg-white/30"/><div className="absolute inset-x-0 bottom-0.5 h-0.5 bg-white/30"/></div></div>
+      return (
+        <div className="w-12 h-10 bg-black rounded-sm relative flex flex-col">
+          <div className="flex justify-around py-0.5">
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+          </div>
+          <div className="flex-1 mx-1.5" style={{ background: photoGradient }}/>
+          <div className="flex justify-around py-0.5">
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+          </div>
+        </div>
+      )
     case 'exif':
-      return <div className={common}><div className="w-6 h-5 bg-border rounded-sm relative"><div className="absolute bottom-0 inset-x-0 h-1.5 bg-black rounded-b-sm"/></div></div>
+      return (
+        <div className="w-11 h-10 relative">
+          <div className="absolute inset-x-0 top-0 h-7" style={{ background: photoGradient }}/>
+          <div className="absolute inset-x-0 bottom-0 h-3 bg-black rounded-b-sm flex items-center px-1 justify-between">
+            <div className="text-[3.5px] text-yellow-400 font-bold">Nikon</div>
+            <div className="text-[3px] text-white font-mono">f/4 · 1/320</div>
+          </div>
+        </div>
+      )
     case 'insta':
-      return <div className={common}><div className="w-6 h-6 bg-white border border-border rounded-md shadow-sm"/></div>
+      return (
+        <div className="w-10 h-10 bg-white rounded-md shadow-md flex items-center justify-center">
+          <div className="w-8 h-7 rounded-sm" style={{ background: photoGradient }}/>
+        </div>
+      )
     case 'leica':
-      return <div className={common}><div className="w-6 h-5 bg-border rounded-sm relative"><div className="absolute bottom-0 inset-x-0 h-1.5 bg-black rounded-b-sm flex items-center justify-start pl-0.5"><div className="w-0.5 h-0.5 rounded-full bg-red-500"/></div></div></div>
+      return (
+        <div className="w-11 h-10 relative">
+          <div className="absolute inset-x-0 top-0 h-7" style={{ background: photoGradient }}/>
+          <div className="absolute inset-x-0 bottom-0 h-3 bg-black rounded-b-sm flex items-center px-1 gap-0.5">
+            <div className="w-1 h-1 rounded-full bg-red-500"/>
+            <div className="text-[3.5px] text-white">Leica · M11</div>
+          </div>
+        </div>
+      )
     case 'red-dot':
-      return <div className={common}><div className="w-5 h-4 bg-border rounded-sm relative"><div className="absolute bottom-0 right-0 w-1 h-1 rounded-full bg-red-500 m-0.5"/></div></div>
+      return (
+        <div className="w-11 h-9 relative rounded-sm overflow-hidden">
+          <div className="absolute inset-0" style={{ background: photoGradient }}/>
+          <div className="absolute bottom-0.5 right-0.5 bg-black/40 backdrop-blur px-1 py-0.5 rounded-sm flex items-center gap-0.5">
+            <div className="w-0.5 h-0.5 rounded-full bg-red-500"/>
+            <div className="text-[3px] text-white font-mono">f/4 · ISO250</div>
+          </div>
+        </div>
+      )
     case 'dazz':
-      return <div className={common}><div className="w-6 h-5 bg-black rounded-sm relative flex flex-col justify-between py-0.5"><div className="flex justify-around"><div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/><div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/><div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/></div><div className="w-3 h-2 bg-border mx-auto rounded-sm"/><div className="flex justify-around"><div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/><div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/><div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/></div></div></div>
+      return (
+        <div className="w-12 h-10 bg-black rounded-sm flex flex-col justify-between py-0.5">
+          <div className="flex justify-around px-0.5">
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+          </div>
+          <div className="mx-1.5 h-5" style={{ background: photoGradient }}/>
+          <div className="flex justify-around px-0.5">
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+          </div>
+        </div>
+      )
     case 'instax':
-      return <div className={common}><div className="w-5 h-6 bg-white border border-border rounded-sm"><div className="w-3 h-3 bg-border mt-0.5 mx-auto"/><div className="w-4 h-1 border-t border-border mt-1 mx-auto"/></div></div>
+      return (
+        <div className="w-9 h-11 bg-[#fefdf7] rounded-sm flex flex-col shadow-sm">
+          <div className="mx-1 mt-1 w-7 h-5" style={{ background: photoGradient }}/>
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-[4px] text-text-3 font-hand">handwritten</div>
+          </div>
+        </div>
+      )
     case 'xhs':
-      return <div className={common}><div className="w-5 h-6 bg-white border border-border rounded-md shadow-sm relative"><div className="absolute top-0.5 left-0.5 text-[5px] text-red-500">📕</div></div></div>
+      return (
+        <div className="w-9 h-11 bg-white rounded-md shadow-md flex flex-col p-0.5">
+          <div className="flex items-center gap-0.5 mb-0.5">
+            <div className="text-[4px]">📕</div>
+            <div className="text-[3px] text-text-3">小红书笔记</div>
+          </div>
+          <div className="flex-1 rounded-sm" style={{ background: photoGradient }}/>
+          <div className="mt-0.5 text-[3px] text-text font-medium">标题</div>
+        </div>
+      )
     case 'vintage':
-      return <div className={common}><div className="w-6 h-5 rounded-sm border border-amber-700/40" style={{background:'#d4b896'}}><div className="w-4 h-3 bg-border/70 mx-auto mt-1"/></div></div>
+      return (
+        <div className="w-11 h-10 rounded-sm relative" style={{ background: '#d4b896' }}>
+          <div className="absolute inset-1.5" style={{ background: photoGradient, filter: 'sepia(0.5)' }}/>
+          <div className="absolute inset-0 border border-amber-800/30 rounded-sm pointer-events-none"/>
+        </div>
+      )
     case 'magazine':
-      return <div className={common}><div className="w-5 h-6 bg-white border border-border rounded-sm flex flex-col"><div className="h-1 border-b border-border flex items-center justify-center text-[4px] font-bold text-text-3">P</div><div className="flex-1 bg-border/50 m-0.5"/><div className="h-1 border-t border-border"/></div></div>
+      return (
+        <div className="w-9 h-11 bg-white rounded-sm flex flex-col shadow-sm">
+          <div className="h-2 border-b border-border flex items-center px-0.5 justify-between">
+            <div className="text-[4px] font-display font-bold">PHOTO</div>
+            <div className="text-[2.5px] text-text-3 font-mono">ISSUE 01</div>
+          </div>
+          <div className="flex-1" style={{ background: photoGradient }}/>
+          <div className="h-2 border-t border-border px-0.5 py-0.5">
+            <div className="text-[3px] text-text">Caption text</div>
+          </div>
+        </div>
+      )
     case 'location':
-      return <div className={common}><div className="w-6 h-5 bg-border rounded-sm relative"><div className="absolute bottom-0 inset-x-0 h-1.5 bg-black rounded-b-sm flex items-center justify-end pr-0.5 text-[5px]">📍</div></div></div>
+      return (
+        <div className="w-11 h-10 relative">
+          <div className="absolute inset-x-0 top-0 h-7" style={{ background: photoGradient }}/>
+          <div className="absolute inset-x-0 bottom-0 h-3 bg-black rounded-b-sm flex items-center px-1 justify-between">
+            <div className="text-[3.5px] text-white">NIKON</div>
+            <div className="text-[3px] text-white">📍 北京·故宫</div>
+          </div>
+        </div>
+      )
     default:
-      return <div className={common}><div className="w-6 h-4 bg-border rounded-sm"/></div>
+      return <div className={photo} style={{ background: photoGradient }}/>
   }
 }
 
