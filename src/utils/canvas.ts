@@ -46,6 +46,11 @@ export function renderFrame(ctx: RenderCtx): HTMLCanvasElement {
   }
 }
 
+/** 竖版感知的尺寸基准：竖版用宽度、横版用长边，防止竖版照片底栏/字号过大 */
+function sizeRef(W: number, H: number): number {
+  return H > W ? W : Math.max(W, H)
+}
+
 /** 工具：字符串在 canvas 上宽度 */
 function textWidth(c: CanvasRenderingContext2D, s: string) {
   return c.measureText(s).width
@@ -136,8 +141,9 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
   const W = image.width
   const H = image.height
   const long = Math.max(W, H)
+  const ref = sizeRef(W, H)
   const pad = Math.round(long * config.padding / 100)
-  const bottomExtra = Math.round(long * 0.06)
+  const bottomExtra = Math.round(ref * 0.06)
   const spread = config.shadow ? Math.round(long * 0.04 * 0.4) : 0
 
   const canvas = document.createElement('canvas')
@@ -155,7 +161,7 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
   c.drawImage(image, cardX + pad, cardY + pad, W, H)
 
   // 底部文字
-  const fontPx = Math.round(long * config.fontSize / 100)
+  const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
   c.font = `500 ${fontPx}px ${FONT_UI}`
   c.textBaseline = 'middle'
@@ -169,7 +175,7 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
 
   // 左下 Logo
   if (config.showLogo && logo) {
-    const lh = Math.round(long * config.logoSize / 100)
+    const lh = Math.round(ref * config.logoSize / 100)
     const lw = lh * (logo.width / logo.height)
     c.drawImage(logo, cardX + pad, centerY - lh / 2, lw, lh)
   }
@@ -182,6 +188,7 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
 // ═══════════════════════════════════════════════════════
 function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
+  const ref = sizeRef(W, H)
   const sidePad = Math.round(long * config.padding / 100)
   const bottomPad = Math.round(long * config.padding / 100 * 3) // 底部约 3x
   const spread = config.shadow ? Math.round(long * 0.04 * 0.4) : 0
@@ -201,7 +208,7 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.drawImage(image, cardX + sidePad, cardY + sidePad, W, H)
 
   // 底部签名文字
-  const fontPx = Math.round(long * config.fontSize / 100)
+  const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
   c.font = `italic 500 ${fontPx}px ${FONT_HAND}`
   c.textAlign = 'center'
@@ -217,6 +224,7 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
 // ═══════════════════════════════════════════════════════
 function renderFilm({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
+  const ref = sizeRef(W, H)
   // 强制最小边距，避免 holeGap = 0 导致死循环
   const minPad = Math.max(16, Math.round(long * 0.008))
   const pad = Math.max(minPad, Math.round(long * config.padding / 100))
@@ -250,7 +258,7 @@ function renderFilm({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   drawHoles(canvas.height - pad / 2)
 
   // 底部胶片编号 + EXIF
-  const fontPx = Math.round(long * config.fontSize / 100)
+  const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
   c.font = `${fontPx}px ${FONT_MONO}`
   c.textBaseline = 'middle'
@@ -275,7 +283,8 @@ function renderFilm({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 // ═══════════════════════════════════════════════════════
 function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
-  const barH = Math.round(long * 0.12)
+  const ref = sizeRef(W, H)
+  const barH = Math.round(ref * 0.10)
 
   const canvas = document.createElement('canvas')
   canvas.width = W
@@ -334,7 +343,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
 
     let textStr = ''
     if (restParts.length > 0) {
-      textStr = restParts.join('  ·  ')
+      textStr = restParts.join(' · ')
     }
 
     // 测量总宽度以判断是否需要缩小
@@ -342,7 +351,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
     const modelW = modelPart ? c.measureText(modelPart).width : 0
     c.font = `400 ${fontPx * 0.9}px ${FONT_MONO}`
     const restW = textStr ? c.measureText(textStr).width : 0
-    const sepW = modelPart && textStr ? c.measureText('   ').width : 0
+    const sepW = modelPart && textStr ? c.measureText('  ').width : 0
 
     const logoH = hasLogo ? Math.round(barH * 0.4) : 0
     const logoW = hasLogo ? logoH * (logo!.width / logo!.height) : 0
@@ -367,7 +376,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
     c.font = `400 ${restFontPx}px ${FONT_MONO}`
     const rW = textStr ? c.measureText(textStr).width : 0
     c.font = `400 ${modelFontPx}px ${FONT_UI}`
-    const sW = modelPart && textStr ? c.measureText('   ').width : 0
+    const sW = modelPart && textStr ? c.measureText('  ').width : 0
 
     const finalLogoH = hasLogo ? Math.round(barH * 0.4) : 0
     const finalLogoW = hasLogo ? finalLogoH * (logo!.width / logo!.height) : 0
@@ -413,7 +422,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
   // ═══════════════════════════════════════════════════════
   // 竖版/窄图缩小字体系数，避免拥挤
   const fontScale = 1
-  const fontPx = Math.round(long * config.fontSize / 100 * fontScale)
+  const fontPx = Math.round(ref * config.fontSize / 100 * fontScale)
 
   // ── 1. 预计算右侧参数块尺寸（无数据则不加入，不显示占位）──
   const rightBlocks: Array<{ label: string; value: string }> = []
@@ -443,7 +452,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
     rightContentW += bw
   }
 
-  let gap = Math.round(padX * 1.6)
+  let gap = Math.round(fontPx * 2)
   if (rightBlocks.length > 1) {
     const gapsCount = rightBlocks.length - 1
     const maxRightW = W - padX * 3
@@ -462,7 +471,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
       let leftX = padX
       // 竖版模式 Logo 也相应缩小
       const logoScale = isPortrait || isNarrow ? 0.7 : 1
-      const lh = Math.round(long * config.logoSize / 100 * logoScale)
+      const lh = Math.round(ref * config.logoSize / 100 * logoScale)
       const lw = lh * (logo!.width / logo!.height)
       c.drawImage(logo!, leftX, centerY - lh / 2, lw, lh)
       leftX += lw + padX * 0.6
@@ -557,8 +566,9 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
 // ═══════════════════════════════════════════════════════
 function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
+  const ref = sizeRef(W, H)
   const pad = Math.round(long * config.padding / 100)
-  const bottomExtra = Math.round(long * 0.09)
+  const bottomExtra = Math.round(ref * 0.09)
   const spread = config.shadow ? Math.round(long * 0.04 * 0.4) : 0
 
   const canvas = document.createElement('canvas')
@@ -583,7 +593,7 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   c.restore()
 
   // 底部信息（两行布局：上行=型号，下行=EXIF）
-  const fontPx = Math.round(long * config.fontSize / 100)
+  const fontPx = Math.round(ref * config.fontSize / 100)
   const titleFont = Math.round(fontPx * 1.15)
   const subFont = Math.round(fontPx * 0.85)
   const lineGap = Math.round(fontPx * 0.35)
@@ -604,7 +614,7 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
     const lh = Math.round(textBlockH * 0.95)
     const lw = lh * (logo!.width / logo!.height)
     c.drawImage(logo!, leftX, centerY - lh / 2, lw, lh)
-    leftX += lw + long * 0.015
+    leftX += lw + ref * 0.015
   }
 
   // 上行：型号（思源宋体，优雅）
@@ -629,7 +639,8 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
 // ═══════════════════════════════════════════════════════
 function renderLeica({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
-  const barH = Math.round(long * 0.06)
+  const ref = sizeRef(W, H)
+  const barH = Math.round(ref * 0.06)
 
   const canvas = document.createElement('canvas')
   canvas.width = W
@@ -642,7 +653,7 @@ function renderLeica({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   c.fillStyle = config.bgColor
   c.fillRect(0, H, W, barH)
 
-  const fontPx = Math.round(long * config.fontSize / 100)
+  const fontPx = Math.round(ref * config.fontSize / 100)
   const centerY = H + barH / 2
   const padX = Math.round(W * 0.025)
 
@@ -678,6 +689,7 @@ function renderLeica({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
 // ═══════════════════════════════════════════════════════
 function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
+  const ref = sizeRef(W, H)
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
@@ -685,9 +697,9 @@ function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 
   c.drawImage(image, 0, 0, W, H)
 
-  const fontPx = Math.round(long * config.fontSize / 100)
-  const pad = Math.round(long * 0.025)
-  const dotR = Math.round(long * 0.012)
+  const fontPx = Math.round(ref * config.fontSize / 100)
+  const pad = Math.round(ref * 0.025)
+  const dotR = Math.round(ref * 0.012)
 
   // 半透明背景块（提升可读性）
   const exifText = config.customText || formatExifLine(exif) || (exif.model ?? '')
@@ -700,7 +712,7 @@ function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   const blockY = H - blockH - pad
 
   c.fillStyle = 'rgba(28,25,23,0.35)'
-  roundRect(c, blockX, blockY, blockW, blockH, Math.round(long * 0.006))
+  roundRect(c, blockX, blockY, blockW, blockH, Math.round(ref * 0.006))
   c.fill()
 
   // 红点
@@ -727,6 +739,7 @@ function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 // ═══════════════════════════════════════════════════════
 function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
+  const ref = sizeRef(W, H)
   // 强制最小边距，避免 holeGap = 0 导致死循环
   const minPad = Math.max(20, Math.round(long * 0.01))
   const pad = Math.max(minPad, Math.round(long * config.padding / 100))
@@ -760,7 +773,7 @@ function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   drawHoleRow(canvas.height - pad / 2)
 
   // 侧边竖排文字（胶片编号 + 品牌）
-  const fontPx = Math.round(long * config.fontSize / 100)
+  const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
   c.font = `500 ${fontPx}px ${FONT_MONO}`
   c.textBaseline = 'middle'
@@ -800,6 +813,7 @@ function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 // ═══════════════════════════════════════════════════════
 function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
+  const ref = sizeRef(W, H)
   const sidePad = Math.round(long * config.padding / 100)
   const topPad = Math.round(sidePad * 0.8)
   const bottomPad = Math.round(sidePad * 3.5)
@@ -836,7 +850,7 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.drawImage(image, cardX + sidePad, cardY + topPad, W, H)
 
   // 底部手写签名
-  const fontPx = Math.round(long * config.fontSize / 100)
+  const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
   c.font = `italic 500 ${fontPx}px ${FONT_HAND}`
   c.textAlign = 'left'
@@ -863,9 +877,10 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
 // ═══════════════════════════════════════════════════════
 function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
+  const ref = sizeRef(W, H)
   const pad = Math.round(long * config.padding / 100)
-  const topArea = Math.round(long * 0.08)
-  const bottomArea = Math.round(long * 0.12)
+  const topArea = Math.round(ref * 0.08)
+  const bottomArea = Math.round(ref * 0.12)
   const spread = config.shadow ? Math.round(long * 0.04 * 0.4) : 0
 
   const canvas = document.createElement('canvas')
@@ -881,7 +896,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
   const { cardX, cardY, cardW, cardH } = drawCard(c, canvas, config, long)
 
   // 顶部小标签（"小红书 · 图文")
-  const fontPx = Math.round(long * config.fontSize / 100)
+  const fontPx = Math.round(ref * config.fontSize / 100)
   c.textBaseline = 'middle'
   c.textAlign = 'left'
   c.fillStyle = 'rgba(28,25,23,0.4)'
@@ -921,7 +936,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
     const desc = formatExifLine(exif) || (exif.lens ?? '')
     if (desc) c.fillText(desc, cardX + pad * 1.2, bottomY + bottomArea * 0.68)
 
-    const lh = Math.round(long * config.logoSize / 100 * 0.8)
+    const lh = Math.round(ref * config.logoSize / 100 * 0.8)
     const lw = lh * (logo!.width / logo!.height)
     c.drawImage(logo!, cardX + cardW - pad * 1.2 - lw, bottomY + bottomArea / 2 - lh / 2, lw, lh)
   } else {
@@ -947,11 +962,12 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
 // ═══════════════════════════════════════════════════════
 function renderVintage({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
+  const ref = sizeRef(W, H)
   const pad = Math.round(long * config.padding / 100)
 
   const canvas = document.createElement('canvas')
   canvas.width = W + pad * 2
-  canvas.height = H + pad * 2 + Math.round(long * 0.06)
+  canvas.height = H + pad * 2 + Math.round(ref * 0.06)
   const c = canvas.getContext('2d')!
 
   // 牛皮纸底（带渐变 + 纹理）
@@ -995,18 +1011,18 @@ function renderVintage({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.restore()
 
   // 底部签名
-  const fontPx = Math.round(long * config.fontSize / 100)
+  const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
   c.font = `italic 500 ${fontPx}px ${FONT_HAND}`
   c.textAlign = 'left'
   c.textBaseline = 'middle'
   const sig = config.customText || 'Vintage'
-  c.fillText(sig, pad * 1.3, pad + H + Math.round(long * 0.03))
+  c.fillText(sig, pad * 1.3, pad + H + Math.round(ref * 0.03))
 
   // 右下日期
   c.textAlign = 'right'
   c.font = `300 ${Math.round(fontPx * 0.8)}px ${FONT_UI}`
-  if (exif.dateTaken) c.fillText(exif.dateTaken, canvas.width - pad * 1.3, pad + H + Math.round(long * 0.03))
+  if (exif.dateTaken) c.fillText(exif.dateTaken, canvas.width - pad * 1.3, pad + H + Math.round(ref * 0.03))
 
   return canvas
 }
@@ -1016,8 +1032,9 @@ function renderVintage({ image, config, exif }: RenderCtx): HTMLCanvasElement {
 // ═══════════════════════════════════════════════════════
 function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
-  const topBar = Math.round(long * 0.08)
-  const bottomBar = Math.round(long * 0.1)
+  const ref = sizeRef(W, H)
+  const topBar = Math.round(ref * 0.08)
+  const bottomBar = Math.round(ref * 0.1)
 
   const canvas = document.createElement('canvas')
   canvas.width = W
@@ -1030,7 +1047,7 @@ function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   // 图片居中
   c.drawImage(image, 0, topBar, W, H)
 
-  const fontPx = Math.round(long * config.fontSize / 100)
+  const fontPx = Math.round(ref * config.fontSize / 100)
   const padX = Math.round(W * 0.04)
 
   // ── 顶部：杂志标题 + 期号 ──
@@ -1091,7 +1108,8 @@ function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 // ═══════════════════════════════════════════════════════
 function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
-  const barH = Math.round(long * 0.10)
+  const ref = sizeRef(W, H)
+  const barH = Math.round(ref * 0.10)
 
   const canvas = document.createElement('canvas')
   canvas.width = W
@@ -1105,13 +1123,13 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
 
   const padX = Math.round(W * 0.035)
   const centerY = H + barH / 2
-  const fontPx = Math.round(long * config.fontSize / 100)
+  const fontPx = Math.round(ref * config.fontSize / 100)
 
   // ── 左侧：Logo + 型号 ──
   const hasLogo = config.showLogo && logo
   let leftX = padX
   if (hasLogo) {
-    const lh = Math.round(long * config.logoSize / 100)
+    const lh = Math.round(ref * config.logoSize / 100)
     const lw = lh * (logo!.width / logo!.height)
     c.drawImage(logo!, leftX, centerY - lh / 2, lw, lh)
     leftX += lw + padX * 0.6
