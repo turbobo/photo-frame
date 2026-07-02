@@ -27,7 +27,7 @@ export default function PhotoUploader({ onFileSelect, loading, error }: Props) {
 
   return (
     <div
-      className="flex-1 flex items-center justify-center p-12 relative"
+      className="flex-1 flex items-center justify-center p-6 md:p-12 relative"
       onDragOver={e => { e.preventDefault(); setDragOver(true) }}
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
@@ -40,7 +40,7 @@ export default function PhotoUploader({ onFileSelect, loading, error }: Props) {
       >
         <input ref={inputRef} type="file" accept={ACCEPT} className="hidden" onChange={handleChange} />
 
-        <div className="w-14 h-14 rounded-xl bg-canvas flex items-center justify-center">
+        <div className="w-12 h-12 md:w-14 md:h-14 rounded-lg md:rounded-xl bg-canvas flex items-center justify-center">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#78716c" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="17 8 12 3 7 8"/>
@@ -49,13 +49,13 @@ export default function PhotoUploader({ onFileSelect, loading, error }: Props) {
         </div>
 
         <div className="text-center space-y-1.5 px-6">
-          <p className="text-[18px] font-medium text-text tracking-tight">上传照片</p>
+          <p className="text-[16px] md:text-[18px] font-medium text-text tracking-tight">上传照片</p>
           <p className="text-[12px] text-text-2 flex items-center justify-center gap-1.5">
             拖拽 · 粘贴
             <kbd className="font-mono text-[10px] bg-canvas border border-border rounded px-1 py-0.5">⌘V</kbd>
             · 点击选择
           </p>
-          <p className="text-[11px] text-text-3 pt-3">
+          <p className="text-[11px] text-text-3 pt-2 md:pt-3">
             JPG · PNG · WebP · HEIC · RAW (CR2/CR3/NEF/ARW/RAF/RW2/ORF/DNG)
           </p>
         </div>

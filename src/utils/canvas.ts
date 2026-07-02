@@ -129,16 +129,6 @@ function drawCard(
   return { cardX: 0, cardY: 0, cardW: canvas.width, cardH: canvas.height }
 }
 
-/** 拼装 EXIF 主要参数字符串 */
-function formatExifLine(exif: ExifData): string {
-  const parts: string[] = []
-  if (exif.focalLength) parts.push(`${Math.round(exif.focalLength)}mm`)
-  if (exif.fNumber) parts.push(`f/${exif.fNumber}`)
-  if (exif.exposureTime) parts.push(exif.exposureTime)
-  if (exif.iso) parts.push(`ISO${exif.iso}`)
-  return parts.join(' · ')
-}
-
 // ═══════════════════════════════════════════════════════
 // 模板 1：极简 Minimal —— 上下左右等宽白边 + 底部一行小字
 // ═══════════════════════════════════════════════════════
@@ -405,6 +395,7 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   const titleFont = Math.round(fontPx * 1.15)
   const subFont = Math.round(fontPx * 0.85)
   const lineGap = Math.round(fontPx * 0.35)
+  const centerY = imgY + H + bottomExtra / 2
   c.textBaseline = 'middle'
 
   // 上行基线 = centerY - (subFont + lineGap) / 2

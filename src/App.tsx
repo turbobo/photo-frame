@@ -54,9 +54,9 @@ export default function App() {
   }, [handleFileSelect])
 
   return (
-    <div className="h-full flex flex-col bg-bg text-text overflow-hidden">
+    <div className="min-h-full md:h-full flex flex-col bg-bg text-text md:overflow-hidden">
       {/* ─────── Header ─────── */}
-      <header className="flex items-center justify-between px-7 h-[64px] shrink-0 border-b border-border bg-surface">
+      <header className="flex items-center justify-between px-4 md:px-7 h-[52px] md:h-[64px] shrink-0 border-b border-border bg-surface">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 flex items-center justify-center">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#18181b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -71,7 +71,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="hidden md:flex items-center gap-1.5">
           {['RAW', 'JPG', 'PNG', 'HEIC'].map(f => (
             <span key={f} className="px-1.5 py-0.5 text-[9px] font-caption text-text-3 border border-border rounded">
               {f}
@@ -81,21 +81,21 @@ export default function App() {
       </header>
 
       {/* ─────── Main: Preview + Control Panel ─────── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
         {/* Preview Area */}
-        <main className="flex-1 flex flex-col overflow-hidden relative bg-canvas">
+        <main className="h-[50vh] md:h-auto md:flex-1 flex flex-col overflow-hidden relative bg-canvas">
           {photo ? (
             <>
               <div className="flex-1 overflow-hidden">
                 <PhotoPreview photo={photo} config={config} logo={logo} />
               </div>
               {/* Bottom: EXIF inline info bar */}
-              <div className="shrink-0 px-7 py-3 border-t border-border bg-surface flex items-center justify-between gap-4">
+              <div className="shrink-0 px-4 md:px-7 py-2 md:py-3 border-t border-border bg-surface flex flex-col md:flex-row md:items-center md:justify-between gap-1 md:gap-4">
                 <div className="flex items-center gap-2 text-text-2 font-mono text-xs truncate">
                   <span className="text-text font-medium">{photo.exif.model || photo.originalName}</span>
                   {photo.exif.lens && <><span className="text-border-strong">·</span><span>{photo.exif.lens}</span></>}
                 </div>
-                <div className="flex items-center gap-2 text-text-2 font-mono text-xs shrink-0">
+                <div className="flex items-center gap-2 text-text-2 font-mono text-xs flex-wrap md:flex-nowrap md:shrink-0">
                   {photo.exif.focalLength && <span>{Math.round(photo.exif.focalLength)}mm</span>}
                   {photo.exif.fNumber && <><span className="text-border-strong">·</span><span>f/{photo.exif.fNumber}</span></>}
                   {photo.exif.exposureTime && <><span className="text-border-strong">·</span><span>{photo.exif.exposureTime}</span></>}
@@ -110,7 +110,7 @@ export default function App() {
         </main>
 
         {/* Control Panel */}
-        <aside className="w-[320px] shrink-0 border-l border-border bg-surface overflow-y-auto">
+        <aside className="w-full md:w-[320px] shrink-0 border-t md:border-t-0 md:border-l border-border bg-surface md:overflow-y-auto">
           <ControlPanel
             photo={photo}
             config={config}

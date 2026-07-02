@@ -56,9 +56,9 @@ export default function ControlPanel({ photo, config, onChange, logo, onReplace,
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col md:h-full">
       {/* Tabs */}
-      <div className="px-6 pt-5 pb-4 border-b border-border shrink-0">
+      <div className="px-4 md:px-6 pt-4 md:pt-5 pb-3 md:pb-4 border-b border-border shrink-0">
         <div className="segment w-full">
           <button data-active={tab === 'style'} onClick={() => setTab('style')}>样式</button>
           <button data-active={tab === 'info'}  onClick={() => setTab('info')}>信息</button>
@@ -89,13 +89,13 @@ export default function ControlPanel({ photo, config, onChange, logo, onReplace,
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="md:flex-1 md:overflow-y-auto">
         {tab === 'style' && <StylePanel config={config} onChange={patch} quality={quality} setQuality={setQuality} format={format} />}
         {tab === 'info'   && <InfoPanel photo={photo} />}
       </div>
 
       {/* ─── 常驻导出栏（sticky footer）─── */}
-      <div className="shrink-0 border-t border-border bg-surface px-5 py-4 space-y-3">
+      <div className="shrink-0 border-t border-border bg-surface px-4 md:px-5 py-3 md:py-4 space-y-3">
         {/* 格式 */}
         <div className="flex items-center gap-2">
           <span className="font-caption text-text-3 w-10 shrink-0">格式</span>

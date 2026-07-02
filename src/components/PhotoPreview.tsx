@@ -60,7 +60,7 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
   }, [rendered, scale])
 
   return (
-    <div ref={containerRef} className="h-full w-full flex items-center justify-center p-10 bg-canvas relative overflow-hidden">
+    <div ref={containerRef} className="h-full w-full flex items-center justify-center p-4 md:p-10 bg-canvas relative overflow-hidden">
       {/* 背景模糊层 —— 照片自身色彩扩散为柔焦光晕 */}
       {bgUrl && (
         <>
@@ -97,7 +97,7 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
 
       {/* 尺寸信息角标 */}
       {rendered && (
-        <div className="absolute bottom-4 right-4 z-20 bg-surface border border-border px-2.5 py-1 rounded text-[10px] font-mono text-text-2 flex items-center gap-2 shadow-card">
+        <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 z-20 bg-surface border border-border px-2.5 py-1 rounded text-[10px] font-mono text-text-2 flex items-center gap-2 shadow-card">
           <span>{rendered.width} × {rendered.height}</span>
           <span className="text-border-strong">/</span>
           <span>{Math.round(scale * 100)}%</span>
