@@ -53,6 +53,7 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
     logoSize: 4,
     radius: 0,
     shadow: false,
+    fontFamily: 'noto-serif',
   }
   switch (id) {
     case 'minimal':

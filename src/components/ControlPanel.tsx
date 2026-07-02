@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { PhotoData, TemplateConfig } from '../types'
 import { TEMPLATES, TEMPLATE_GROUPS } from '../templates'
+import { FONT_FAMILIES } from '../utils/fonts'
 import { renderFrame } from '../utils/canvas'
 
 interface Props {
@@ -177,6 +178,24 @@ function StylePanel({
         <div className="space-y-3">
           <ColorRow label="背景" value={config.bgColor} onChange={v => onChange({ bgColor: v })} />
           <ColorRow label="文字" value={config.textColor} onChange={v => onChange({ textColor: v })} />
+        </div>
+      </section>
+
+      {/* Font family */}
+      <section>
+        <SectionLabel>字体</SectionLabel>
+        <div className="grid grid-cols-5 gap-1.5">
+          {FONT_FAMILIES.map(f => (
+            <button key={f.key}
+              onClick={() => onChange({ fontFamily: f.key })}
+              className={`py-2 rounded-md text-[12px] border transition-all duration-fast
+                ${(config.fontFamily || 'noto-serif') === f.key
+                  ? 'border-accent bg-surface shadow-card text-text'
+                  : 'border-border bg-canvas-soft text-text-2 hover:border-text-3'}`}
+              style={{ fontFamily: f.stack }}>
+              {f.label}
+            </button>
+          ))}
         </div>
       </section>
 
