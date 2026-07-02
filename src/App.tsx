@@ -83,24 +83,24 @@ export default function App() {
       {/* ─────── Main: Preview + Control Panel ─────── */}
       <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
         {/* Preview Area */}
-        <main className="h-[50vh] md:h-auto md:flex-1 flex flex-col overflow-hidden relative bg-canvas">
+        <main className="h-[60vh] md:h-auto md:flex-1 flex flex-col overflow-hidden relative bg-canvas">
           {photo ? (
             <>
               <div className="flex-1 overflow-hidden">
                 <PhotoPreview photo={photo} config={config} logo={logo} />
               </div>
               {/* Bottom: EXIF inline info bar */}
-              <div className="shrink-0 px-4 md:px-7 py-2 md:py-3 border-t border-border bg-surface flex flex-col md:flex-row md:items-center md:justify-between gap-1 md:gap-4">
-                <div className="flex items-center gap-2 text-text-2 font-mono text-xs truncate">
-                  <span className="text-text font-medium">{photo.exif.model || photo.originalName}</span>
-                  {photo.exif.lens && <><span className="text-border-strong">·</span><span>{photo.exif.lens}</span></>}
+              <div className="shrink-0 px-3 md:px-7 py-1.5 md:py-3 border-t border-border bg-surface flex flex-row items-center justify-between gap-2 md:gap-4">
+                <div className="flex items-center gap-1.5 md:gap-2 text-text-2 font-mono text-[10px] md:text-xs truncate min-w-0">
+                  <span className="text-text font-medium truncate">{photo.exif.model || photo.originalName}</span>
+                  {photo.exif.lens && <><span className="text-border-strong hidden md:inline">·</span><span className="hidden md:inline truncate">{photo.exif.lens}</span></>}
                 </div>
-                <div className="flex items-center gap-2 text-text-2 font-mono text-xs flex-wrap md:flex-nowrap md:shrink-0">
+                <div className="flex items-center gap-1 md:gap-2 text-text-2 font-mono text-[10px] md:text-xs shrink-0">
                   {photo.exif.focalLength && <span>{Math.round(photo.exif.focalLength)}mm</span>}
                   {photo.exif.fNumber && <><span className="text-border-strong">·</span><span>f/{photo.exif.fNumber}</span></>}
                   {photo.exif.exposureTime && <><span className="text-border-strong">·</span><span>{photo.exif.exposureTime}</span></>}
                   {photo.exif.iso && <><span className="text-border-strong">·</span><span>ISO{photo.exif.iso}</span></>}
-                  {photo.exif.dateTaken && <><span className="text-border-strong">·</span><span className="text-text-3">{photo.exif.dateTaken}</span></>}
+                  {photo.exif.dateTaken && <><span className="text-border-strong hidden md:inline">·</span><span className="text-text-3 hidden md:inline">{photo.exif.dateTaken}</span></>}
                 </div>
               </div>
             </>

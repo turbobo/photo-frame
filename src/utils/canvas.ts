@@ -290,44 +290,89 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
   const padX = Math.round(W * 0.04)
   const centerY = H + barH / 2
   const fontPx = Math.round(long * config.fontSize / 100)
+  const hasLogo = config.showLogo && logo
 
-  // ── 左侧：Logo + 型号 ──
-  let leftX = padX
-  if (config.showLogo && logo) {
-    const lh = Math.round(long * config.logoSize / 100)
-    const lw = lh * (logo.width / logo.height)
-    c.drawImage(logo, leftX, centerY - lh / 2, lw, lh)
-    leftX += lw + padX * 0.6
-  }
-
-  c.fillStyle = config.textColor
-  c.textBaseline = 'middle'
-  c.textAlign = 'left'
-
-  const modelText = exif.model || '—'
-  c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
-  c.fillText(modelText, leftX, centerY - fontPx * 0.5)
-
-  c.fillStyle = 'rgba(255,255,255,0.55)'
-  c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
-  const lensText = exif.lens || config.customText || ''
-  if (lensText) c.fillText(lensText, leftX, centerY + fontPx * 0.7)
-
-  // ── 右侧：光圈 快门 ISO 焦距 ──
+  // ── 1. 预计算右侧参数块尺寸 ──
   const rightBlocks: Array<{ label: string; value: string }> = []
   if (exif.focalLength) rightBlocks.push({ label: '焦距', value: `${Math.round(exif.focalLength)}mm` })
   if (exif.fNumber) rightBlocks.push({ label: '光圈', value: `f/${exif.fNumber}` })
   if (exif.exposureTime) rightBlocks.push({ label: '快门', value: exif.exposureTime })
   if (exif.iso) rightBlocks.push({ label: 'ISO', value: `${exif.iso}` })
 
-  if (rightBlocks.length) {
-    // 块间距（padX × 1.6）：比原始 0.9 宽松，比 2.5 紧凑
-    const gap = Math.round(padX * 1.6)
-    const blockFontValue = Math.round(fontPx * 1.2)
-    const blockFontLabel = Math.round(fontPx * 0.7)
-    let rightX = W - padX
+  const blockFontValue = Math.round(fontPx * 1.2)
+  const blockFontLabel = Math.round(fontPx * 0.7)
+  const blockWidths: number[] = []
+  let rightContentW = 0
 
-    // 记录每个块的右边界，用于后续画分隔点（跳过最右边一个）
+  for (const b of rightBlocks) {
+    c.font = `500 ${blockFontValue}px ${FONT_MONO}`
+    const vw = c.measureText(b.value).width
+    c.font = `400 ${blockFontLabel}px ${FONT_UI}`
+    const lw = c.measureText(b.label).width
+    const bw = Math.max(vw, lw)
+    blockWidths.push(bw)
+    rightContentW += bw
+  }
+
+  let gap = Math.round(padX * 1.6)
+  if (rightBlocks.length > 1) {
+    const gapsCount = rightBlocks.length - 1
+    const maxRightW = W - padX * 3
+    if (rightContentW + gapsCount * gap > maxRightW) {
+      gap = Math.max(Math.round(padX * 0.4), Math.floor((maxRightW - rightContentW) / gapsCount))
+    }
+  }
+  const rightAreaW = rightContentW + Math.max(0, rightBlocks.length - 1) * gap
+
+  // ── 2. 左侧：Logo + 型号 / 无 Logo 居中 ──
+  const modelText = exif.model || '—'
+  const lensText = exif.lens || config.customText || ''
+
+  if (hasLogo) {
+    let leftX = padX
+    const lh = Math.round(long * config.logoSize / 100)
+    const lw = lh * (logo!.width / logo!.height)
+    c.drawImage(logo!, leftX, centerY - lh / 2, lw, lh)
+    leftX += lw + padX * 0.6
+
+    c.fillStyle = config.textColor
+    c.textBaseline = 'middle'
+    c.textAlign = 'left'
+    c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
+    c.fillText(modelText, leftX, centerY - fontPx * 0.5)
+    c.fillStyle = withAlpha(config.textColor, 0.55)
+    c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
+    if (lensText) c.fillText(lensText, leftX, centerY + fontPx * 0.7)
+  } else {
+    c.fillStyle = config.textColor
+    c.textBaseline = 'middle'
+
+    if (rightBlocks.length === 0) {
+      c.textAlign = 'center'
+      c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
+      c.fillText(modelText, W / 2, centerY - fontPx * 0.5)
+      c.fillStyle = withAlpha(config.textColor, 0.55)
+      c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
+      if (lensText) c.fillText(lensText, W / 2, centerY + fontPx * 0.7)
+    } else {
+      const leftEnd = W - padX - rightAreaW - padX
+      const leftCenterX = leftEnd > padX
+        ? (padX + leftEnd) / 2
+        : padX
+      const align = leftEnd > padX ? 'center' as const : 'left' as const
+
+      c.textAlign = align
+      c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
+      c.fillText(modelText, leftCenterX, centerY - fontPx * 0.5)
+      c.fillStyle = withAlpha(config.textColor, 0.55)
+      c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
+      if (lensText) c.fillText(lensText, leftCenterX, centerY + fontPx * 0.7)
+    }
+  }
+
+  // ── 3. 右侧参数块 ──
+  if (rightBlocks.length) {
+    let rightX = W - padX
     const blockEdges: number[] = []
 
     for (let i = rightBlocks.length - 1; i >= 0; i--) {
@@ -336,17 +381,15 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
       c.fillStyle = config.textColor
       c.font = `500 ${blockFontValue}px ${FONT_MONO}`
       c.fillText(b.value, rightX, centerY - blockFontLabel * 0.5)
-      c.fillStyle = 'rgba(255,255,255,0.55)'
+      c.fillStyle = withAlpha(config.textColor, 0.55)
       c.font = `400 ${blockFontLabel}px ${FONT_UI}`
       c.fillText(b.label, rightX, centerY + blockFontValue * 0.6)
-      const blockW = Math.max(c.measureText(b.value).width, c.measureText(b.label).width)
-      rightX -= blockW
-      blockEdges.push(rightX)   // 块左边 x
+      rightX -= blockWidths[i]
+      blockEdges.push(rightX)
       rightX -= gap
     }
 
-    // 块间分隔点（居中在 gap 中，最右 gap 不画）
-    c.fillStyle = 'rgba(255,255,255,0.35)'
+    c.fillStyle = withAlpha(config.textColor, 0.35)
     const dotR = Math.max(1.5, Math.round(fontPx * 0.08))
     for (let i = 0; i < blockEdges.length - 1; i++) {
       const edgeX = blockEdges[i]
@@ -407,25 +450,27 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
 
   // Logo 与上行文字对齐（同高）
   let leftX = imgX
-  if (config.showLogo && logo) {
+  const hasLogo = config.showLogo && logo
+  if (hasLogo) {
     const lh = Math.round(textBlockH * 0.95)
-    const lw = lh * (logo.width / logo.height)
-    c.drawImage(logo, leftX, centerY - lh / 2, lw, lh)
+    const lw = lh * (logo!.width / logo!.height)
+    c.drawImage(logo!, leftX, centerY - lh / 2, lw, lh)
     leftX += lw + long * 0.015
   }
 
   // 上行：型号（思源宋体，优雅）
   c.fillStyle = config.textColor
-  c.textAlign = 'left'
+  c.textAlign = hasLogo ? 'left' : 'center'
+  const textX = hasLogo ? leftX : canvas.width / 2
   c.font = `500 ${titleFont}px ${FONT_DISPLAY}`
   const title = config.customText || exif.model || ''
-  if (title) c.fillText(title, leftX, topY)
+  if (title) c.fillText(title, textX, topY)
 
   // 下行：EXIF 参数（Inter，细体）
   c.fillStyle = 'rgba(28,25,23,0.55)'
   c.font = `400 ${subFont}px ${FONT_UI}`
   const sub = formatExifLine(exif) || (exif.dateTaken ?? '')
-  if (sub) c.fillText(sub, leftX, botY)
+  if (sub) c.fillText(sub, textX, botY)
 
   return canvas
 }
@@ -711,22 +756,38 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
 
   // 底部：标题 + 描述
   const bottomY = imgY + H
-  c.textAlign = 'left'
-  c.fillStyle = config.textColor
-  c.font = `500 ${Math.round(fontPx * 1.2)}px ${FONT_DISPLAY}`
-  const title = config.customText || exif.model || '无标题'
-  c.fillText(title, cardX + pad * 1.2, bottomY + bottomArea * 0.38)
+  const hasLogo = config.showLogo && logo
+  const hasDesc = !!(formatExifLine(exif) || exif.lens)
 
-  c.fillStyle = 'rgba(28,25,23,0.55)'
-  c.font = `400 ${Math.round(fontPx * 0.8)}px ${FONT_UI}`
-  const desc = formatExifLine(exif) || (exif.lens ?? '')
-  if (desc) c.fillText(desc, cardX + pad * 1.2, bottomY + bottomArea * 0.68)
+  if (hasLogo) {
+    // 有 logo：左对齐标题/描述，右侧放 logo
+    c.textAlign = 'left'
+    c.fillStyle = config.textColor
+    c.font = `500 ${Math.round(fontPx * 1.2)}px ${FONT_DISPLAY}`
+    const title = config.customText || exif.model || '无标题'
+    c.fillText(title, cardX + pad * 1.2, bottomY + bottomArea * 0.38)
 
-  // 右下：Logo 小标
-  if (config.showLogo && logo) {
+    c.fillStyle = 'rgba(28,25,23,0.55)'
+    c.font = `400 ${Math.round(fontPx * 0.8)}px ${FONT_UI}`
+    const desc = formatExifLine(exif) || (exif.lens ?? '')
+    if (desc) c.fillText(desc, cardX + pad * 1.2, bottomY + bottomArea * 0.68)
+
     const lh = Math.round(long * config.logoSize / 100 * 0.8)
-    const lw = lh * (logo.width / logo.height)
-    c.drawImage(logo, cardX + cardW - pad * 1.2 - lw, bottomY + bottomArea / 2 - lh / 2, lw, lh)
+    const lw = lh * (logo!.width / logo!.height)
+    c.drawImage(logo!, cardX + cardW - pad * 1.2 - lw, bottomY + bottomArea / 2 - lh / 2, lw, lh)
+  } else {
+    // 无 logo：居中显示标题 + 描述
+    c.textAlign = 'center'
+    c.fillStyle = config.textColor
+    c.font = `500 ${Math.round(fontPx * 1.2)}px ${FONT_DISPLAY}`
+    const title = config.customText || exif.model || '无标题'
+    const titleY = hasDesc ? bottomY + bottomArea * 0.38 : bottomY + bottomArea * 0.5
+    c.fillText(title, cardX + cardW / 2, titleY)
+
+    c.fillStyle = 'rgba(28,25,23,0.55)'
+    c.font = `400 ${Math.round(fontPx * 0.8)}px ${FONT_UI}`
+    const desc = formatExifLine(exif) || (exif.lens ?? '')
+    if (desc) c.fillText(desc, cardX + cardW / 2, bottomY + bottomArea * 0.68)
   }
 
   return canvas
@@ -898,33 +959,74 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
   const fontPx = Math.round(long * config.fontSize / 100)
 
   // ── 左侧：Logo + 型号 ──
+  const hasLogo = config.showLogo && logo
   let leftX = padX
-  if (config.showLogo && logo) {
+  if (hasLogo) {
     const lh = Math.round(long * config.logoSize / 100)
-    const lw = lh * (logo.width / logo.height)
-    c.drawImage(logo, leftX, centerY - lh / 2, lw, lh)
+    const lw = lh * (logo!.width / logo!.height)
+    c.drawImage(logo!, leftX, centerY - lh / 2, lw, lh)
     leftX += lw + padX * 0.6
   }
 
   c.textBaseline = 'middle'
-  c.textAlign = 'left'
-  c.fillStyle = config.textColor
-  c.font = `500 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
-  c.fillText(exif.model || '—', leftX, centerY - fontPx * 0.45)
-  c.fillStyle = 'rgba(255,255,255,0.55)'
-  c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_UI}`
-  const lens = exif.lens || formatExifLine(exif) || ''
-  if (lens) c.fillText(lens, leftX, centerY + fontPx * 0.55)
+
+  // 右侧：地点 + 日期
+  const locationName = config.locationName || config.customText || ''
+  const hasRight = !!(locationName || exif.dateTaken)
+
+  // 预计算右侧宽度以确定左侧可用区域
+  let rightAreaW = 0
+  if (hasRight) {
+    c.font = `500 ${Math.round(fontPx * 1.0)}px ${FONT_DISPLAY}`
+    if (locationName) rightAreaW = Math.max(rightAreaW, c.measureText(`📍 ${locationName}`).width)
+    c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_MONO}`
+    if (exif.dateTaken) rightAreaW = Math.max(rightAreaW, c.measureText(exif.dateTaken).width)
+  }
+
+  // 左侧文字布局
+  if (hasLogo) {
+    c.textAlign = 'left'
+    c.fillStyle = config.textColor
+    c.font = `500 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
+    c.fillText(exif.model || '—', leftX, centerY - fontPx * 0.45)
+    c.fillStyle = withAlpha(config.textColor, 0.55)
+    c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_UI}`
+    const lens = exif.lens || formatExifLine(exif) || ''
+    if (lens) c.fillText(lens, leftX, centerY + fontPx * 0.55)
+  } else if (!hasRight) {
+    // 无 logo 无右侧：全宽居中
+    c.textAlign = 'center'
+    c.fillStyle = config.textColor
+    c.font = `500 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
+    c.fillText(exif.model || '—', W / 2, centerY - fontPx * 0.45)
+    c.fillStyle = withAlpha(config.textColor, 0.55)
+    c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_UI}`
+    const lens = exif.lens || formatExifLine(exif) || ''
+    if (lens) c.fillText(lens, W / 2, centerY + fontPx * 0.55)
+  } else {
+    // 无 logo 有右侧：左半区居中
+    const leftEnd = W - padX - rightAreaW - padX
+    const leftCenterX = leftEnd > padX ? (padX + leftEnd) / 2 : padX
+    const align = leftEnd > padX ? 'center' as const : 'left' as const
+
+    c.textAlign = align
+    c.fillStyle = config.textColor
+    c.font = `500 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
+    c.fillText(exif.model || '—', leftCenterX, centerY - fontPx * 0.45)
+    c.fillStyle = withAlpha(config.textColor, 0.55)
+    c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_UI}`
+    const lens = exif.lens || formatExifLine(exif) || ''
+    if (lens) c.fillText(lens, leftCenterX, centerY + fontPx * 0.55)
+  }
 
   // ── 右侧：地点 + 日期 ──
   c.textAlign = 'right'
-  const locationName = config.locationName || config.customText || ''
   c.fillStyle = config.textColor
   c.font = `500 ${Math.round(fontPx * 1.0)}px ${FONT_DISPLAY}`
   if (locationName) {
     c.fillText(`📍 ${locationName}`, W - padX, centerY - fontPx * 0.45)
   }
-  c.fillStyle = 'rgba(255,255,255,0.55)'
+  c.fillStyle = withAlpha(config.textColor, 0.55)
   c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_MONO}`
   if (exif.dateTaken) {
     c.fillText(exif.dateTaken, W - padX, centerY + fontPx * 0.55)

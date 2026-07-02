@@ -42,7 +42,7 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
     if (!el || !rendered) return
     const compute = () => {
       const rect = el.getBoundingClientRect()
-      const pad = 56
+      const pad = rect.width < 640 ? 12 : 56
       const availW = rect.width - pad * 2
       const availH = rect.height - pad * 2
       const s = Math.min(availW / rendered.width, availH / rendered.height, 1)
@@ -60,7 +60,7 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
   }, [rendered, scale])
 
   return (
-    <div ref={containerRef} className="h-full w-full flex items-center justify-center p-4 md:p-10 bg-canvas relative overflow-hidden">
+    <div ref={containerRef} className="h-full w-full flex items-center justify-center p-1.5 md:p-10 bg-canvas relative overflow-hidden">
       {/* 背景模糊层 —— 照片自身色彩扩散为柔焦光晕 */}
       {bgUrl && (
         <>
