@@ -6,10 +6,13 @@ interface Props {
   photo: PhotoData
   config: TemplateConfig
   logo: HTMLImageElement | null
+  onReplace?: (f: File) => void
+  onClear?: () => void
 }
 
-export default function PhotoPreview({ photo, config, logo }: Props) {
+export default function PhotoPreview({ photo, config, logo, onReplace, onClear }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [rendered, setRendered] = useState<HTMLCanvasElement | null>(null)
   const [scale, setScale] = useState(1)
   const [bgUrl, setBgUrl] = useState<string | null>(null)
@@ -105,6 +108,64 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
           <span>{rendered.width} × {rendered.height}</span>
           <span className="text-border-strong">/</span>
           <span>{Math.round(scale * 100)}%</span>
+        </div>
+      )}
+
+      {/* 浮动操作栏 —— 左下角（换一张 + 清空） */}
+      {(onReplace || onClear) && (
+        <div className="absolute bottom-2 left-2 md:bottom-4 md:left-4 z-20 flex items-center gap-1.5">
+          {/* 隐藏的 file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.orf,.pef,.dng,.rwl,image/*"
+            className="hidden"
+            onChange={e => {
+              const f = e.target.files?.[0]
+              if (f && onReplace) onReplace(f)
+              e.target.value = ''
+            }}
+          />
+
+          {/* 换一张按钮 */}
+          {onReplace && (
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="group/btn flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                bg-black/60 backdrop-blur-md border border-white/10
+                hover:bg-black/75 hover:border-white/20
+                text-white text-[12px] font-medium
+                shadow-elev transition-all duration-fast"
+              title="换一张照片">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/>
+                <path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/>
+                <polyline points="3 22 3 16 9 16"/>
+                <polyline points="21 2 21 8 15 8"/>
+              </svg>
+              <span className="hidden md:inline">换一张</span>
+            </button>
+          )}
+
+          {/* 清空按钮 */}
+          {onClear && (
+            <button
+              onClick={onClear}
+              className="group/btn flex items-center gap-1.5 px-3 py-1.5 rounded-full
+                bg-black/60 backdrop-blur-md border border-white/10
+                hover:bg-red-500/80 hover:border-red-400/40
+                text-white text-[12px] font-medium
+                shadow-elev transition-all duration-fast"
+              title="清空照片回到上传">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+              <span className="hidden md:inline">清空</span>
+            </button>
+          )}
         </div>
       )}
     </div>

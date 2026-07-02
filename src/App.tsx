@@ -37,6 +37,12 @@ export default function App() {
     }
   }, [])
 
+  const handleClear = useCallback(() => {
+    setPhoto(null)
+    setLogo(null)
+    setError(null)
+  }, [])
+
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items
@@ -87,7 +93,13 @@ export default function App() {
           {photo ? (
             <>
               <div className="flex-1 overflow-hidden">
-                <PhotoPreview photo={photo} config={config} logo={logo} />
+                <PhotoPreview
+                  photo={photo}
+                  config={config}
+                  logo={logo}
+                  onReplace={handleFileSelect}
+                  onClear={handleClear}
+                />
               </div>
               {/* Bottom: EXIF inline info bar */}
               <div className="shrink-0 px-3 md:px-7 py-1.5 md:py-3 border-t border-border bg-surface flex flex-row items-center justify-between gap-2 md:gap-4">
@@ -117,6 +129,7 @@ export default function App() {
             onChange={setConfig}
             logo={logo}
             onReplace={photo ? handleFileSelect : undefined}
+            onClear={photo ? handleClear : undefined}
             loading={loading}
           />
         </aside>

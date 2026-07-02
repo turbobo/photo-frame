@@ -9,12 +9,13 @@ interface Props {
   onChange: (c: TemplateConfig) => void
   logo: HTMLImageElement | null
   onReplace?: (f: File) => void
+  onClear?: () => void
   loading?: boolean
 }
 
 type Tab = 'style' | 'info'
 
-export default function ControlPanel({ photo, config, onChange, logo, onReplace, loading }: Props) {
+export default function ControlPanel({ photo, config, onChange, logo, loading }: Props) {
   const [tab, setTab] = useState<Tab>('style')
 
   // 导出状态（独立于 tab，跨 tab 保持）
@@ -62,29 +63,6 @@ export default function ControlPanel({ photo, config, onChange, logo, onReplace,
         <div className="segment w-full">
           <button data-active={tab === 'style'} onClick={() => setTab('style')}>样式</button>
           <button data-active={tab === 'info'}  onClick={() => setTab('info')}>信息</button>
-          {onReplace && (
-            <button
-              onClick={() => {
-                const input = document.createElement('input')
-                input.type = 'file'
-                input.accept = '.jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.orf,.pef,.dng,image/*'
-                input.onchange = e => {
-                  const f = (e.target as HTMLInputElement).files?.[0]
-                  if (f) onReplace(f)
-                }
-                input.click()
-              }}
-              className="ml-auto text-text-3 hover:text-text"
-              title="更换照片"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/>
-                <path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/>
-                <polyline points="3 22 3 16 9 16"/>
-                <polyline points="21 2 21 8 15 8"/>
-              </svg>
-            </button>
-          )}
         </div>
       </div>
 
