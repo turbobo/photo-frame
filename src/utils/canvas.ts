@@ -382,28 +382,41 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   c.drawImage(image, imgX, imgY, W, H)
   c.restore()
 
-  // 底部信息
+  // 底部信息（两行布局：上行=型号，下行=EXIF）
   const fontPx = Math.round(long * config.fontSize / 100)
-  const centerY = imgY + H + bottomExtra / 2
+  const titleFont = Math.round(fontPx * 1.15)
+  const subFont = Math.round(fontPx * 0.85)
+  const lineGap = Math.round(fontPx * 0.35)
   c.textBaseline = 'middle'
 
-  // 左侧 Logo + 型号
+  // 上行基线 = centerY - (subFont + lineGap) / 2
+  // 下行基线 = centerY + (titleFont + lineGap) / 2
+  // 这样两行文字的视觉中线正好落在 centerY
+  const topY = centerY - (subFont + lineGap) / 2
+  const botY = centerY + (titleFont + lineGap) / 2
+  const textBlockH = titleFont + lineGap + subFont
+
+  // Logo 与上行文字对齐（同高）
   let leftX = imgX
   if (config.showLogo && logo) {
-    const lh = Math.round(long * config.logoSize / 100)
+    const lh = Math.round(textBlockH * 0.95)
     const lw = lh * (logo.width / logo.height)
     c.drawImage(logo, leftX, centerY - lh / 2, lw, lh)
     leftX += lw + long * 0.015
   }
+
+  // 上行：型号（思源宋体，优雅）
   c.fillStyle = config.textColor
   c.textAlign = 'left'
-  c.font = `500 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
+  c.font = `500 ${titleFont}px ${FONT_DISPLAY}`
   const title = config.customText || exif.model || ''
-  if (title) c.fillText(title, leftX, centerY - fontPx * 0.5)
+  if (title) c.fillText(title, leftX, topY)
+
+  // 下行：EXIF 参数（Inter，细体）
   c.fillStyle = 'rgba(0,0,0,0.55)'
-  c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
+  c.font = `400 ${subFont}px ${FONT_UI}`
   const sub = formatExifLine(exif) || (exif.dateTaken ?? '')
-  if (sub) c.fillText(sub, leftX, centerY + fontPx * 0.6)
+  if (sub) c.fillText(sub, leftX, botY)
 
   return canvas
 }
