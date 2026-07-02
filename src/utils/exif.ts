@@ -48,19 +48,36 @@ export async function loadImage(file: File): Promise<HTMLImageElement> {
     return loadImageFromBlob(file)
   }
 
-  // RAW / HEIC / 其他 → 尝试提取内嵌预览
+  // RAW / HEIC / 其他 → 提取内嵌 JPEG 预览
+  let buf: ArrayBuffer | undefined
+
+  // 尝试 1: 分块读取（快速，适用于大多数文件）
   try {
-    const buf = await exifr.thumbnail(file)
-    if (buf) {
-      const blob = new Blob([buf as ArrayBuffer], { type: 'image/jpeg' })
-      return loadImageFromBlob(blob)
-    }
+    buf = await exifr.thumbnail(file) as ArrayBuffer | undefined
   } catch (e) {
-    console.warn('exifr thumbnail failed:', e)
+    console.warn('exifr thumbnail (chunked) failed:', e)
   }
 
-  // fallback: 让浏览器尝试原生渲染
-  return loadImageFromBlob(file)
+  // 尝试 2: 全量读取（某些 RAW 的缩略图偏移量超出默认分块范围）
+  if (!buf) {
+    try {
+      const fullBuf = await file.arrayBuffer()
+      buf = await exifr.thumbnail(fullBuf) as ArrayBuffer | undefined
+    } catch (e) {
+      console.warn('exifr thumbnail (full read) failed:', e)
+    }
+  }
+
+  if (buf) {
+    const blob = new Blob([buf], { type: 'image/jpeg' })
+    return loadImageFromBlob(blob)
+  }
+
+  throw new Error(
+    isRawFile(file)
+      ? '无法提取 RAW 内嵌预览，请将文件转换为 JPG 后上传'
+      : '不支持的图像格式',
+  )
 }
 
 /** 提取 EXIF 元数据 */
