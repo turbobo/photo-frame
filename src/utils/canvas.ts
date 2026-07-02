@@ -1213,12 +1213,16 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
 // ═══════════════════════════════════════════════════════
 // 模板 14：光影（light-shadow）—— 参考「光影边框」App
 // 底部纯黑薄条 + 单行居中 EXIF（空格分隔，无 Logo，无 label）
+// 顶部边缘带向上渐变雾化，让黑条与照片"融"在一起
 // ═══════════════════════════════════════════════════════
 function renderLightShadow({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   const W = image.width
   const H = image.height
   // 黑条高度按图片高度的 5%（竖版/横版都基于 H，保持视觉厚度一致）
   const barH = Math.round(H * 0.05)
+  // 顶部边缘雾化区（向上渐变 fade 进照片区域）
+  // 比例：黑条高度的 60%，视觉上与黑条融为一体
+  const fadeH = Math.max(8, Math.round(barH * 0.6))
 
   const canvas = document.createElement('canvas')
   canvas.width = W
@@ -1228,7 +1232,16 @@ function renderLightShadow({ image, config, exif }: RenderCtx): HTMLCanvasElemen
   // 绘制原图
   c.drawImage(image, 0, 0, W, H)
 
-  // 绘制底部纯黑薄条
+  // 1) 顶部边缘雾化：在照片最底部叠一层从透明到纯色的渐变
+  //    让黑条外缘（与照片相接处）有"光渗"效果
+  const fadeGrad = c.createLinearGradient(0, H - fadeH, 0, H)
+  fadeGrad.addColorStop(0, withAlpha(config.bgColor, 0))
+  fadeGrad.addColorStop(0.5, withAlpha(config.bgColor, 0.35))
+  fadeGrad.addColorStop(1, withAlpha(config.bgColor, 0.85))
+  c.fillStyle = fadeGrad
+  c.fillRect(0, H - fadeH, W, fadeH)
+
+  // 2) 底部纯黑薄条
   c.fillStyle = config.bgColor // 默认 #000000
   c.fillRect(0, H, W, barH)
 
