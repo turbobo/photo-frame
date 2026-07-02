@@ -174,7 +174,7 @@ function StylePanel({
   format: string
 }) {
   return (
-    <div className="p-6 space-y-7">
+    <div className="p-4 md:p-6 space-y-5 md:space-y-7">
       {/* Templates grid */}
       <section>
         <SectionLabel>模板</SectionLabel>
@@ -338,7 +338,7 @@ function InfoPanel({ photo }: { photo: PhotoData | null }) {
     ['GPS',  exif.gps ? `${exif.gps.lat.toFixed(4)}, ${exif.gps.lng.toFixed(4)}` : undefined],
   ]
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="space-y-2.5">
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-baseline justify-between gap-3 text-[12px]">
