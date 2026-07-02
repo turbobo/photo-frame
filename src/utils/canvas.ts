@@ -331,8 +331,8 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
   if (exif.iso) rightBlocks.push({ label: 'ISO', value: `${exif.iso}` })
 
   if (rightBlocks.length) {
-    // 加大块间距（padX × 2.5），让每组参数更易分辨
-    const gap = Math.round(padX * 2.5)
+    // 块间距（padX × 1.6）：比原始 0.9 宽松，比 2.5 紧凑
+    const gap = Math.round(padX * 1.6)
     const blockFontValue = Math.round(fontPx * 1.2)
     const blockFontLabel = Math.round(fontPx * 0.7)
     let rightX = W - padX
