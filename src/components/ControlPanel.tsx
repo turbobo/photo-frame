@@ -259,8 +259,9 @@ function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: 
 // Template thumbnail — larger preview area + embedded name + hint
 function TemplateThumb({ id, selected }: { id: string; selected: boolean }) {
   const meta: Record<string, { name: string; hint: string }> = {
-    minimal:  { name: '极简',     hint: '白/黑边 + 底部小字' },
-    polaroid: { name: '拍立得',   hint: '经典上下等宽白边' },
+    minimal:      { name: '极简',     hint: '白/黑边 + 底部小字' },
+    polaroid:     { name: '拍立得',   hint: '经典上下等宽白边' },
+    'light-shadow': { name: '光影',   hint: '底部纯黑薄条 + 单行 EXIF' },
     film:     { name: '胶片',     hint: '黑框齿孔 + 编号' },
     exif:     { name: '参数栏',   hint: 'Logo + 光圈快门 ISO' },
     insta:    { name: '社交卡片', hint: '毛玻璃 + 圆角 + 阴影' },
@@ -437,6 +438,17 @@ function TemplatePreview({ id }: { id: string }) {
           <div className="absolute inset-x-0 bottom-0 h-3 bg-black rounded-b-sm flex items-center px-1 justify-between">
             <div className="text-[3.5px] text-white">NIKON</div>
             <div className="text-[3px] text-white">📍 北京·故宫</div>
+          </div>
+        </div>
+      )
+    case 'light-shadow':
+      return (
+        <div className="w-11 h-9 relative overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-7" style={{ background: photoGradient }}/>
+          <div className="absolute inset-x-0 bottom-0 h-2 bg-black flex items-center justify-center">
+            <div className="text-[2.8px] text-white/90 font-mono tracking-tight whitespace-nowrap">
+              NIKON Z5  50mm F4 1/13s ISO250
+            </div>
           </div>
         </div>
       )

@@ -1,6 +1,7 @@
-// 13 种边框模板 —— 元数据 + 默认配置
+// 14 种边框模板 —— 元数据 + 默认配置
 // 5 个原有：minimal / polaroid / film / exif / insta
 // 8 个新增：leica / red-dot / dazz / instax / xhs / vintage / magazine / location
+// 1 个参考：light-shadow（参考「光影边框」App 风格）
 import type { TemplateConfig, TemplateId } from '../types'
 
 export interface TemplateMeta {
@@ -13,8 +14,9 @@ export interface TemplateMeta {
 
 export const TEMPLATES: TemplateMeta[] = [
   // ── 基础 ──
-  { id: 'minimal',   group: 'basic',  name: '极简',      desc: '白/黑边 + 底部小字',             icon: '▫️' },
-  { id: 'polaroid',  group: 'basic',  name: '拍立得',    desc: '经典上下等宽白边',               icon: '🖼️' },
+  { id: 'minimal',      group: 'basic',  name: '极简',      desc: '白/黑边 + 底部小字',             icon: '▫️' },
+  { id: 'polaroid',     group: 'basic',  name: '拍立得',    desc: '经典上下等宽白边',               icon: '🖼️' },
+  { id: 'light-shadow', group: 'basic',  name: '光影',      desc: '底部纯黑薄条 + 单行 EXIF',       icon: '🌓' },
   // ── 品牌风 ──
   { id: 'leica',     group: 'brand',  name: '徕卡栏',    desc: '底部黑栏 + 红点 + 型号',         icon: '🔴' },
   { id: 'red-dot',   group: 'brand',  name: '红点水印',  desc: '右下角悬浮红点 + 参数',          icon: '⚪' },
@@ -57,6 +59,17 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
       return { ...base, padding: 3, bgColor: '#ffffff', textColor: '#333', shadow: true }
     case 'polaroid':
       return { ...base, padding: 6, bgColor: '#fefdf7', textColor: '#333', fontSize: 2.5, showLogo: false, showExif: false, shadow: true }
+    case 'light-shadow':
+      return {
+        ...base,
+        padding: 0,
+        bgColor: '#000000',
+        textColor: '#ffffff',
+        fontSize: 1.2,
+        showLogo: false,
+        showExif: true,
+        shadow: false,
+      }
     case 'film':
       return { ...base, padding: 8, bgColor: '#0a0a0a', textColor: '#e5e5e5', showLogo: false, fontSize: 1.6 }
     case 'exif':

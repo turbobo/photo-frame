@@ -1,5 +1,6 @@
-// 水印字体系统 —— 4 套字体栈
+// 水印字体系统 —— 4 套字体栈 + 可选字体
 // 字体已在 main.tsx 中通过 @fontsource 注入
+import type { FontFamily } from '../types'
 
 /**
  * Display — 思源宋体
@@ -28,6 +29,23 @@ export const FONT_MONO = '"JetBrains Mono", "SF Mono", "Menlo", monospace'
  * 特点：优雅中文楷体、有温度
  */
 export const FONT_HAND = '"LXGW WenKai Mono TC", "STKaiti", "Kaiti SC", "Kaiti", cursive'
+
+// ────────────────────────────────────────────────
+// 可选字体（用于 Display 位置替换）
+// ────────────────────────────────────────────────
+
+export const FONT_FAMILIES: Array<{ key: FontFamily; label: string; stack: string }> = [
+  { key: 'noto-serif',  label: '宋体',  stack: FONT_DISPLAY },
+  { key: 'noto-sans',   label: '黑体',  stack: '"Noto Sans SC", "PingFang SC", "Helvetica Neue", sans-serif' },
+  { key: 'inter',       label: '西文',  stack: FONT_UI },
+  { key: 'jetbrains',   label: '等宽',  stack: FONT_MONO },
+  { key: 'wenkai',      label: '手写',  stack: FONT_HAND },
+]
+
+export function getFontStack(family?: FontFamily): string {
+  if (!family) return FONT_DISPLAY
+  return FONT_FAMILIES.find(f => f.key === family)?.stack ?? FONT_DISPLAY
+}
 
 // ────────────────────────────────────────────────
 // 排版工具

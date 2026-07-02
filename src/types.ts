@@ -15,6 +15,9 @@ export interface ExifData {
 export type TemplateId =
   | 'minimal' | 'polaroid' | 'film' | 'exif' | 'insta'
   | 'leica' | 'red-dot' | 'dazz' | 'instax' | 'xhs' | 'vintage' | 'magazine' | 'location'
+  | 'light-shadow'
+
+export type FontFamily = 'noto-serif' | 'noto-sans' | 'inter' | 'jetbrains' | 'wenkai'
 
 export interface TemplateConfig {
   id: TemplateId
@@ -28,6 +31,7 @@ export interface TemplateConfig {
   logoSize: number     // 相对图片长边的百分比 (2-10)
   radius: number       // 0-50 px
   shadow: boolean
+  fontFamily?: FontFamily
   locationName?: string // 用于 location 模板的地点名
 }
 

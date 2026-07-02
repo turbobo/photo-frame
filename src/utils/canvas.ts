@@ -1,8 +1,8 @@
 // Canvas 渲染核心 —— 13 种边框模板绘制
 import type { ExifData, TemplateConfig } from '../types'
 import {
-  FONT_DISPLAY, FONT_UI, FONT_MONO, FONT_HAND,
-  WATERMARK, withAlpha, formatExifLine,
+  FONT_UI, FONT_MONO, FONT_HAND,
+  WATERMARK, withAlpha, formatExifLine, getFontStack,
 } from './fonts'
 
 export interface RenderCtx {
@@ -42,6 +42,7 @@ export function renderFrame(ctx: RenderCtx): HTMLCanvasElement {
     case 'vintage':  return renderVintage(safeCtx)
     case 'magazine': return renderMagazine(safeCtx)
     case 'location': return renderLocation(safeCtx)
+    case 'light-shadow': return renderLightShadow(safeCtx)
     default:         return renderMinimal(safeCtx)
   }
 }
@@ -1198,6 +1199,72 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
   if (exif.dateTaken) {
     c.fillText(exif.dateTaken, W - padX, centerY + fontPx * 0.55)
   }
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 14：光影（light-shadow）—— 参考「光影边框」App
+// 底部纯黑薄条 + 单行居中 EXIF（空格分隔，无 Logo，无 label）
+// ═══════════════════════════════════════════════════════
+function renderLightShadow({ image, config, exif }: RenderCtx): HTMLCanvasElement {
+  const W = image.width
+  const H = image.height
+  // 黑条高度按图片高度的 5%（竖版/横版都基于 H，保持视觉厚度一致）
+  const barH = Math.round(H * 0.05)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H + barH
+  const c = canvas.getContext('2d')!
+
+  // 绘制原图
+  c.drawImage(image, 0, 0, W, H)
+
+  // 绘制底部纯黑薄条
+  c.fillStyle = config.bgColor // 默认 #000000
+  c.fillRect(0, H, W, barH)
+
+  // 拼装单行 EXIF：品牌 型号  焦距 光圈 快门 ISO
+  // 空格分隔（多个空格用于分组：型号 | 拍摄参数）
+  const parts: string[] = []
+  // 型号块：make + model（或仅 model）
+  const modelBlock = [exif.make, exif.model].filter(Boolean).join(' ')
+  if (modelBlock) parts.push(modelBlock)
+  // 拍摄参数块
+  const paramParts: string[] = []
+  if (exif.focalLength) paramParts.push(`${Math.round(exif.focalLength)}mm`)
+  if (exif.fNumber) paramParts.push(`F${exif.fNumber}`)
+  if (exif.exposureTime) paramParts.push(exif.exposureTime)
+  if (exif.iso) paramParts.push(`ISO${exif.iso}`)
+  if (paramParts.length > 0) parts.push(paramParts.join(' '))
+
+  // 兜底：自定义文字或日期
+  const line = parts.length > 0
+    ? parts.join('  ')
+    : (config.customText || exif.dateTaken || '')
+
+  if (!line) return canvas // 没有任何内容，只保留黑条
+
+  // 字号：基于图片长边 1%（参考值），根据文本总宽度自适应缩小
+  const long = Math.max(W, H)
+  const basePx = Math.max(10, Math.round(long * config.fontSize / 100 * 0.8))
+  c.font = `300 ${basePx}px ${FONT_MONO}`
+  let textW = c.measureText(line).width
+  const availW = W * 0.95
+  // 自适应：文本过长时按比例缩小
+  let finalPx = basePx
+  if (textW > availW) {
+    const shrink = availW / textW
+    finalPx = Math.max(8, Math.round(basePx * shrink * 0.95))
+    c.font = `300 ${finalPx}px ${FONT_MONO}`
+    textW = c.measureText(line).width
+  }
+
+  c.fillStyle = config.textColor // 默认 #ffffff
+  c.textAlign = 'center'
+  c.textBaseline = 'middle'
+  c.fillText(line, W / 2, H + barH / 2)
 
   return canvas
 }
