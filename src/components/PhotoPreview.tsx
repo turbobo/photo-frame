@@ -71,16 +71,16 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
               backgroundSize: '110% 110%',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
-              filter: 'blur(80px) saturate(1.35) brightness(0.92)',
+              filter: 'blur(80px) saturate(1.35) brightness(0.85)',
               opacity: 0.55,
               transform: 'scale(1.08)', // 放大避免模糊边缘露白
             }}
             aria-hidden="true"
           />
-          {/* 深色叠加层 —— 防止过曝 + 增强前景照片对比度 */}
+          {/* 深色叠加层 —— 轻微压暗 + 增强前景照片对比度 */}
           <div
             className="absolute inset-0"
-            style={{ background: 'rgba(28, 25, 23, 0.08)' }}
+            style={{ background: 'rgba(28, 25, 23, 0.04)' }}
             aria-hidden="true"
           />
         </>
@@ -97,7 +97,7 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
 
       {/* 尺寸信息角标 */}
       {rendered && (
-        <div className="absolute bottom-4 right-4 z-20 bg-surface/85 backdrop-blur border border-border px-2.5 py-1 rounded text-[10px] font-mono text-text-2 flex items-center gap-2 shadow-card">
+        <div className="absolute bottom-4 right-4 z-20 bg-surface border border-border px-2.5 py-1 rounded text-[10px] font-mono text-text-2 flex items-center gap-2 shadow-card">
           <span>{rendered.width} × {rendered.height}</span>
           <span className="text-border-strong">/</span>
           <span>{Math.round(scale * 100)}%</span>

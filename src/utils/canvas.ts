@@ -156,7 +156,7 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
   const c = canvas.getContext('2d')!
 
   // 画布背景（阴影外围区域）
-  c.fillStyle = '#f5f5f4'
+  c.fillStyle = '#a8a39d'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
   // 卡片 + 三层阴影
@@ -201,7 +201,7 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   canvas.height = H + sidePad + bottomPad + spread * 2
   const c = canvas.getContext('2d')!
 
-  c.fillStyle = '#f5f5f4'
+  c.fillStyle = '#a8a39d'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
   // 卡片 + 三层阴影
@@ -595,7 +595,7 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   const c = canvas.getContext('2d')!
 
   // 米白底 + 微弱纸张纹理
-  c.fillStyle = '#f5f5f4'
+  c.fillStyle = '#a8a39d'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
   // 卡片 + 三层阴影

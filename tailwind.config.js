@@ -6,7 +6,7 @@ export default {
       colors: {
         bg:             '#fafaf9',
         surface:        '#ffffff',
-        canvas:         '#f5f5f4',
+        canvas:         '#a8a39d',
         border:         '#e7e5e4',
         'border-strong':'#d6d3d1',
         text:           '#1c1917',
