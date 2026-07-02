@@ -294,10 +294,126 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
 
   const padX = Math.round(W * 0.04)
   const centerY = H + barH / 2
-  // 竖版/窄图缩小字体系数，避免拥挤
-  const fontScale = isPortrait || isNarrow ? 0.75 : 1
-  const fontPx = Math.round(long * config.fontSize / 100 * fontScale)
   const hasLogo = config.showLogo && logo
+  const modelText = exif.model || ''
+  const lensText = exif.lens || config.customText || ''
+
+  // 收集实际存在的参数值
+  const paramValues: string[] = []
+  if (exif.focalLength) paramValues.push(`${Math.round(exif.focalLength)}mm`)
+  if (exif.fNumber) paramValues.push(`f/${exif.fNumber}`)
+  if (exif.exposureTime) paramValues.push(exif.exposureTime)
+  if (exif.iso) paramValues.push(`ISO${exif.iso}`)
+
+  // ── 简洁单行模式（Copicseal 风格）：竖版 / 窄图 / 参数 ≤ 3 个 ──
+  const useCompact = isPortrait || isNarrow || paramValues.length <= 3
+
+  if (useCompact) {
+    // 字号按图片宽度计算（而非 long），避免竖版字过大
+    const basePx = Math.round(W * config.fontSize / 100 * 0.85)
+    const fontPx = Math.max(10, basePx)
+
+    c.textBaseline = 'middle'
+    c.textAlign = 'center'
+
+    // 拼装单行内容：[型号] · 参数1 · 参数2 · ...
+    const segments: string[] = []
+    if (modelText) segments.push(modelText)
+    if (lensText && !isPortrait && !isNarrow) segments.push(lensText) // 横版才加镜头
+    segments.push(...paramValues)
+
+    if (segments.length === 0) {
+      // 无任何内容，bar 留空
+      return canvas
+    }
+
+    // 字号与样式：型号加粗显示，参数等宽
+    // 先计算布局：logo 在左，文字整体居中
+    const modelPart = modelText ? segments[0] : ''
+    const restParts = modelText ? segments.slice(1) : segments
+
+    let textStr = ''
+    if (restParts.length > 0) {
+      textStr = restParts.join('  ·  ')
+    }
+
+    // 测量总宽度以判断是否需要缩小
+    c.font = `500 ${fontPx}px ${FONT_DISPLAY}`
+    const modelW = modelPart ? c.measureText(modelPart).width : 0
+    c.font = `400 ${fontPx * 0.9}px ${FONT_MONO}`
+    const restW = textStr ? c.measureText(textStr).width : 0
+    const sepW = modelPart && textStr ? c.measureText('   ').width : 0
+
+    const logoH = hasLogo ? Math.round(barH * 0.4) : 0
+    const logoW = hasLogo ? logoH * (logo!.width / logo!.height) : 0
+    const logoGap = hasLogo ? Math.round(padX * 0.5) : 0
+
+    const totalW = logoW + logoGap + modelW + sepW + restW
+    const availW = W - padX * 2
+
+    // 如果总宽度超过可用宽度，按比例缩小字号
+    let finalFontPx = fontPx
+    if (totalW > availW && totalW > 0) {
+      const shrink = availW / totalW
+      finalFontPx = Math.max(9, Math.round(fontPx * shrink * 0.95))
+    }
+
+    // 计算起始 X（整体居中）
+    const modelFontPx = finalFontPx
+    const restFontPx = Math.round(finalFontPx * 0.9)
+
+    c.font = `500 ${modelFontPx}px ${FONT_DISPLAY}`
+    const mW = modelPart ? c.measureText(modelPart).width : 0
+    c.font = `400 ${restFontPx}px ${FONT_MONO}`
+    const rW = textStr ? c.measureText(textStr).width : 0
+    c.font = `400 ${modelFontPx}px ${FONT_UI}`
+    const sW = modelPart && textStr ? c.measureText('   ').width : 0
+
+    const finalLogoH = hasLogo ? Math.round(barH * 0.4) : 0
+    const finalLogoW = hasLogo ? finalLogoH * (logo!.width / logo!.height) : 0
+    const finalLogoGap = hasLogo ? Math.round(padX * 0.5) : 0
+
+    const finalTotalW = finalLogoW + finalLogoGap + mW + sW + rW
+    let curX = (W - finalTotalW) / 2
+
+    // 绘制 logo
+    if (hasLogo) {
+      c.drawImage(logo!, curX, centerY - finalLogoH / 2, finalLogoW, finalLogoH)
+      curX += finalLogoW + finalLogoGap
+    }
+
+    // 绘制型号（粗体，显示字体）
+    if (modelPart) {
+      c.fillStyle = config.textColor
+      c.textAlign = 'left'
+      c.font = `500 ${modelFontPx}px ${FONT_DISPLAY}`
+      c.fillText(modelPart, curX, centerY)
+      curX += mW
+    }
+
+    // 分隔空白
+    if (modelPart && textStr) {
+      c.font = `400 ${modelFontPx}px ${FONT_UI}`
+      curX += sW
+    }
+
+    // 绘制参数（等宽字体，次级颜色）
+    if (textStr) {
+      c.fillStyle = withAlpha(config.textColor, 0.7)
+      c.textAlign = 'left'
+      c.font = `400 ${restFontPx}px ${FONT_MONO}`
+      c.fillText(textStr, curX, centerY)
+    }
+
+    return canvas
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // 双行模式（横版 + 4 个参数）
+  // ═══════════════════════════════════════════════════════
+  // 竖版/窄图缩小字体系数，避免拥挤
+  const fontScale = 1
+  const fontPx = Math.round(long * config.fontSize / 100 * fontScale)
 
   // ── 1. 预计算右侧参数块尺寸（无数据则不加入，不显示占位）──
   const rightBlocks: Array<{ label: string; value: string }> = []
@@ -336,10 +452,6 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
     }
   }
   const rightAreaW = rightContentW + Math.max(0, rightBlocks.length - 1) * gap
-
-  // ── 2. 左侧：Logo + 型号（无型号则不渲染，避免显示 "—"）──
-  const modelText = exif.model || ''
-  const lensText = exif.lens || config.customText || ''
 
   // 如果没有任何文字可显示（无型号 + 无镜头 + 无参数），整个 bar 留空
   const hasLeftContent = modelText || lensText
