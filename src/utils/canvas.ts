@@ -367,7 +367,7 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   const c = canvas.getContext('2d')!
 
   // 全画布背景（半透明遮罩）
-  c.fillStyle = '#f2f4f8'
+  c.fillStyle = '#b8b3ad'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
   // 卡片 + 三层阴影
@@ -413,7 +413,7 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   if (title) c.fillText(title, leftX, topY)
 
   // 下行：EXIF 参数（Inter，细体）
-  c.fillStyle = 'rgba(0,0,0,0.55)'
+  c.fillStyle = 'rgba(28,25,23,0.55)'
   c.font = `400 ${subFont}px ${FONT_UI}`
   const sub = formatExifLine(exif) || (exif.dateTaken ?? '')
   if (sub) c.fillText(sub, leftX, botY)
@@ -496,7 +496,7 @@ function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   const blockX = W - blockW - pad
   const blockY = H - blockH - pad
 
-  c.fillStyle = 'rgba(0,0,0,0.35)'
+  c.fillStyle = 'rgba(28,25,23,0.35)'
   roundRect(c, blockX, blockY, blockW, blockH, Math.round(long * 0.006))
   c.fill()
 
@@ -616,15 +616,15 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
 
   // 卡片内部纸张纹理（弱渐变）
   const grain = c.createLinearGradient(cardX, cardY, cardX + cardW, cardY + cardH)
-  grain.addColorStop(0, 'rgba(0,0,0,0.015)')
-  grain.addColorStop(0.5, 'rgba(0,0,0,0)')
-  grain.addColorStop(1, 'rgba(0,0,0,0.02)')
+  grain.addColorStop(0, 'rgba(28,25,23,0.015)')
+  grain.addColorStop(0.5, 'rgba(28,25,23,0)')
+  grain.addColorStop(1, 'rgba(28,25,23,0.02)')
   c.fillStyle = grain
   c.fillRect(cardX, cardY, cardW, cardH)
 
   // 图像区域（轻微阴影）
   c.save()
-  c.shadowColor = 'rgba(0,0,0,0.12)'
+  c.shadowColor = 'rgba(28,25,23,0.12)'
   c.shadowBlur = sidePad * 0.3
   c.shadowOffsetY = sidePad * 0.1
   c.fillStyle = '#000'
@@ -647,7 +647,7 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   if (exif.dateTaken) {
     const smallFont = Math.round(fontPx * 0.6)
     c.font = `300 ${smallFont}px ${FONT_UI}`
-    c.fillStyle = 'rgba(0,0,0,0.5)'
+    c.fillStyle = 'rgba(28,25,23,0.5)'
     c.textAlign = 'right'
     c.fillText(exif.dateTaken, cardX + cardW - sidePad * 1.2, cardY + cardH - sidePad * 0.8)
   }
@@ -671,7 +671,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
   const c = canvas.getContext('2d')!
 
   // 画布背景
-  c.fillStyle = '#fafafa'
+  c.fillStyle = '#b8b3ad'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
   // 卡片 + 三层阴影
@@ -681,7 +681,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
   const fontPx = Math.round(long * config.fontSize / 100)
   c.textBaseline = 'middle'
   c.textAlign = 'left'
-  c.fillStyle = 'rgba(0,0,0,0.4)'
+  c.fillStyle = 'rgba(28,25,23,0.4)'
   c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_UI}`
   c.fillText('📕 小红书笔记', cardX + pad * 1.2, cardY + topArea / 2)
 
@@ -708,7 +708,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
   const title = config.customText || exif.model || '无标题'
   c.fillText(title, cardX + pad * 1.2, bottomY + bottomArea * 0.38)
 
-  c.fillStyle = 'rgba(0,0,0,0.55)'
+  c.fillStyle = 'rgba(28,25,23,0.55)'
   c.font = `400 ${Math.round(fontPx * 0.8)}px ${FONT_UI}`
   const desc = formatExifLine(exif) || (exif.lens ?? '')
   if (desc) c.fillText(desc, cardX + pad * 1.2, bottomY + bottomArea * 0.68)
@@ -760,7 +760,7 @@ function renderVintage({ image, config, exif }: RenderCtx): HTMLCanvasElement {
 
   // 图像区域带微阴影
   c.save()
-  c.shadowColor = 'rgba(0,0,0,0.25)'
+  c.shadowColor = 'rgba(28,25,23,0.25)'
   c.shadowBlur = pad * 0.4
   c.shadowOffsetY = pad * 0.1
   c.fillStyle = '#000'
@@ -827,12 +827,12 @@ function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   // 右上：期号 + 日期
   c.textAlign = 'right'
   c.font = `400 ${Math.round(fontPx * 0.65)}px ${FONT_MONO}`
-  c.fillStyle = 'rgba(0,0,0,0.55)'
+  c.fillStyle = 'rgba(28,25,23,0.55)'
   const issue = `ISSUE ${exif.dateTaken?.replace(/\D/g, '').slice(-4) || '001'}  ·  ${exif.dateTaken || ''}`
   c.fillText(issue, W - padX, topBar / 2 - fontPx * 0.25)
 
   // 顶部分隔线
-  c.strokeStyle = 'rgba(0,0,0,0.15)'
+  c.strokeStyle = 'rgba(28,25,23,0.15)'
   c.lineWidth = 1
   c.beginPath()
   c.moveTo(padX, topBar - 1)
@@ -853,7 +853,7 @@ function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   const title = config.customText || exif.model || 'Untitled'
   c.fillText(title, padX, bottomY + bottomBar * 0.4)
 
-  c.fillStyle = 'rgba(0,0,0,0.55)'
+  c.fillStyle = 'rgba(28,25,23,0.55)'
   c.font = `300 ${Math.round(fontPx * 0.7)}px ${FONT_UI}`
   const desc = formatExifLine(exif) || (exif.lens ?? '')
   if (desc) c.fillText(desc, padX, bottomY + bottomBar * 0.7)
@@ -861,7 +861,7 @@ function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   // 右下：页码
   c.textAlign = 'right'
   c.font = `400 ${Math.round(fontPx * 0.7)}px ${FONT_MONO}`
-  c.fillStyle = 'rgba(0,0,0,0.5)'
+  c.fillStyle = 'rgba(28,25,23,0.5)'
   c.fillText('— 01 / 01 —', W - padX, bottomY + bottomBar * 0.55)
 
   return canvas

@@ -378,7 +378,7 @@ function RangeRow({ label, value, min, max, step, suffix, onChange }: {
 }
 
 function ColorRow({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  const presets = ['#ffffff', '#f5f5f5', '#fafaf9', '#1c1917', '#18181b', '#0f172a', '#d4b896', '#f97316']
+  const presets = ['#ffffff', '#fafaf9', '#f5f5f4', '#d4b896', '#a8a39d', '#44403c', '#1c1917', '#18181b']
   return (
     <div>
       <div className="flex items-center justify-between mb-2">

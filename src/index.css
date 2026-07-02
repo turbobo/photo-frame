@@ -3,18 +3,28 @@
 @tailwind utilities;
 
 :root {
-  --bg: #fafaf9;
-  --surface: #ffffff;
-  --canvas: #a8a39d;
-  --border: #e7e5e4;
-  --border-strong: #d6d3d1;
-  --text: #1c1917;
-  --text-secondary: #78716c;
-  --text-tertiary: #a8a29e;
+  /* 基础色板（Stone 暖灰） */
+  --surface: #ffffff;            /* 卡片、侧栏、按钮背景 */
+  --canvas: #a8a39d;             /* 预览区主背景（中灰） */
+  --canvas-soft: #b8b3ad;       /* 渲染器外围浅色层 */
+  --canvas-dim: #8a8682;        /* 画布深色层（用于阴影外围） */
+  --border: #e7e5e4;            /* 普通边框 */
+  --border-strong: #d6d3d1;     /* 强调边框 */
+
+  /* 文字层级 */
+  --text: #1c1917;              /* 主文字 */
+  --text-secondary: #78716c;    /* 次文字 */
+  --text-tertiary: #a8a29e;     /* 弱文字 / caption */
+
+  /* 强调色（统一中性黑） */
   --accent: #18181b;
   --accent-hover: #27272a;
 
-  /* Font families */
+  /* 控件专用 */
+  --segment: #efeeec;           /* 分段控件背景（浅暖灰） */
+  --segment-active: #ffffff;    /* 分段控件激活 */
+
+  /* 字体栈 */
   --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
   --font-display: 'Noto Serif SC', 'Songti SC', 'Source Han Serif SC', serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Menlo', monospace;
@@ -25,7 +35,7 @@
 
 html, body, #root {
   height: 100%; margin: 0;
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text);
   font-family: var(--font-ui);
   font-feature-settings: 'cv11', 'ss01';
@@ -36,7 +46,7 @@ html, body, #root {
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; border: 2px solid var(--surface); }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-tertiary); }
 
 /* Typography */
@@ -73,7 +83,7 @@ input:focus-visible, button:focus-visible { outline: none; box-shadow: 0 0 0 2px
 
 /* Button primitives */
 .btn-ghost { background: transparent; border: none; color: var(--text-secondary); transition: color 0.15s, background 0.15s; cursor: pointer; }
-.btn-ghost:hover { color: var(--text); background: var(--canvas); }
+.btn-ghost:hover { color: var(--text); background: var(--segment); }
 .btn-primary { background: var(--accent); color: white; border: none; transition: background 0.15s, transform 0.1s; cursor: pointer; }
 .btn-primary:hover { background: var(--accent-hover); }
 .btn-primary:active { transform: scale(0.98); }
@@ -82,6 +92,6 @@ input:focus-visible, button:focus-visible { outline: none; box-shadow: 0 0 0 2px
 .btn-outline:hover { border-color: var(--accent); }
 
 /* Segmented control */
-.segment { display: inline-flex; background: var(--canvas); padding: 2px; border-radius: 7px; gap: 1px; }
+.segment { display: inline-flex; background: var(--segment); padding: 2px; border-radius: 7px; gap: 1px; }
 .segment button { padding: 4px 10px; border-radius: 5px; font-size: 11px; font-weight: 500; color: var(--text-secondary); transition: all 0.15s; white-space: nowrap; background: transparent; border: none; cursor: pointer; }
-.segment button[data-active="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.segment button[data-active="true"] { background: var(--segment-active); color: var(--text); box-shadow: 0 1px 2px rgba(28,25,23,0.06); }

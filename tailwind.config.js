@@ -4,16 +4,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg:             '#fafaf9',
-        surface:        '#ffffff',
-        canvas:         '#a8a39d',
-        border:         '#e7e5e4',
-        'border-strong':'#d6d3d1',
-        text:           '#1c1917',
-        'text-2':       '#78716c',
-        'text-3':       '#a8a29e',
+        // 基础色板（Stone 暖灰）
+        surface:        '#ffffff',            // 卡片、侧栏、按钮背景
+        canvas:         '#a8a39d',            // 预览区主背景（中灰）
+        'canvas-soft':  '#b8b3ad',            // 画布浅色层（用于渲染器外围背景）
+        border:         '#e7e5e4',            // 普通边框
+        'border-strong':'#d6d3d1',            // 强调边框
+        // 文字层级
+        text:           '#1c1917',            // 主文字
+        'text-2':       '#78716c',            // 次文字
+        'text-3':       '#a8a29e',            // 弱文字 / caption
+        // 强调色（统一中性黑）
         accent:         '#18181b',
         'accent-hover': '#27272a',
+        // 遮罩
+        overlay:        'rgba(28, 25, 23, 0.05)',   // 浅色压暗层
+        'overlay-dark': 'rgba(28, 25, 23, 0.55)',   // 深色遮罩
       },
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'sans-serif'],
@@ -30,8 +36,8 @@ export default {
         '4xl':  ['32px', { lineHeight: '1.1', letterSpacing: '-0.025em' }],
       },
       boxShadow: {
-        'card': '0 1px 2px rgba(28,25,23,0.04), 0 1px 3px rgba(28,25,23,0.06)',
-        'elev': '0 4px 12px rgba(28,25,23,0.08), 0 1px 3px rgba(28,25,23,0.04)',
+        'card': '0 1px 2px rgba(28,25,23,0.06), 0 1px 3px rgba(28,25,23,0.08)',
+        'elev': '0 4px 16px rgba(28,25,23,0.10), 0 1px 3px rgba(28,25,23,0.06)',
       },
       borderRadius: {
         'sm': '4px',
