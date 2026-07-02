@@ -48,6 +48,67 @@ export function getFontStack(family?: FontFamily): string {
 }
 
 // ────────────────────────────────────────────────
+// 字体角色映射：按角色 + 用户选择的 fontFamily 给出合理栈
+// ────────────────────────────────────────────────
+
+export type FontRole = 'display' | 'ui' | 'mono' | 'hand' | 'accent'
+
+/**
+ * 按角色 + 全局 fontFamily 给出实际 font stack。
+ * 设计原则：mono（等宽 EXIF）/ hand（手写签名）始终保留专用栈，
+ * 其他角色按用户选择的 fontFamily 做合理映射。
+ */
+export function getFontForRole(role: FontRole, family?: FontFamily): string {
+  // mono / hand 永远用专用栈（保持 EXIF 对齐、手写温度）
+  if (role === 'mono') return FONT_MONO
+  if (role === 'hand') return FONT_HAND
+
+  // display / ui / accent 按用户选择映射
+  const primary = getFontStack(family) // 用户选的主字体
+  switch (role) {
+    case 'display':
+      return primary
+    case 'ui':
+      // 等宽字体不适合 UI，回退 Inter
+      if (family === 'jetbrains') return FONT_UI
+      return primary
+    case 'accent':
+      // accent 与 display 一致
+      return primary
+    default:
+      return primary
+  }
+}
+
+// ────────────────────────────────────────────────
+// 响应式分级：按图像长边自动调整信息密度与字号倍率
+// ────────────────────────────────────────────────
+
+export type ResponsiveLevel = 'compact' | 'normal' | 'detail'
+
+export interface ResponsiveConfig {
+  level: ResponsiveLevel
+  fontScale: number    // 字号总倍率
+  detailLevel: number  // 0/1/2（EXIF 信息密度）
+}
+
+/**
+ * 按图像长边返回响应式配置：
+ * - < 800px:     compact  0.85× 少细节（手机端分享）
+ * - 800-2000px:  normal   1.0×  标准
+ * - > 2000px:    detail   1.05× 全部细节（桌面打印）
+ */
+export function getResponsive(long: number): ResponsiveConfig {
+  if (long < 800) {
+    return { level: 'compact', fontScale: 0.85, detailLevel: 0 }
+  }
+  if (long > 2000) {
+    return { level: 'detail', fontScale: 1.05, detailLevel: 2 }
+  }
+  return { level: 'normal', fontScale: 1.0, detailLevel: 1 }
+}
+
+// ────────────────────────────────────────────────
 // 排版工具
 // ────────────────────────────────────────────────
 
