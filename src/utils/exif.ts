@@ -3,6 +3,9 @@
 // 策略：exifr 一次性提取 EXIF 元数据 + 内嵌 JPEG 预览图
 
 import type { ExifData } from '../types'
+// 静态导入 exifr：避免 EdgeOne 部署下 dynamic import chunk fetch 失败
+// 代价：增加主 bundle ~75KB (gzipped ~26KB)，换取 100% 加载可靠性
+import * as exifr from 'exifr'
 
 /** RAW 后缀白名单 */
 const RAW_EXTENSIONS = ['cr2', 'cr3', 'nef', 'arw', 'sr2', 'raf', 'rw2', 'orf', 'pef', 'dng', 'rwl']
@@ -46,9 +49,8 @@ export async function loadImage(file: File): Promise<HTMLImageElement> {
   }
 
   // RAW / HEIC / 其他 → 尝试提取内嵌预览
-  const { thumbnail } = await import('exifr')
   try {
-    const buf = await thumbnail(file)
+    const buf = await exifr.thumbnail(file)
     if (buf) {
       const blob = new Blob([buf as ArrayBuffer], { type: 'image/jpeg' })
       return loadImageFromBlob(blob)
@@ -64,7 +66,6 @@ export async function loadImage(file: File): Promise<HTMLImageElement> {
 /** 提取 EXIF 元数据 */
 export async function extractExif(file: File): Promise<ExifData> {
   try {
-    const exifr = await import('exifr')
     const meta = await exifr.parse(file, {
       pick: [
         'Make', 'Model', 'LensModel', 'LensMake',
