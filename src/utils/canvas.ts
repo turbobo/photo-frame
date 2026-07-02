@@ -1,5 +1,9 @@
 // Canvas 渲染核心 —— 13 种边框模板绘制
 import type { ExifData, TemplateConfig } from '../types'
+import {
+  FONT_DISPLAY, FONT_UI, FONT_MONO, FONT_HAND,
+  WATERMARK, withAlpha, formatExifLine,
+} from './fonts'
 
 export interface RenderCtx {
   image: HTMLImageElement
@@ -85,7 +89,7 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
   // 底部文字
   const fontPx = Math.round(long * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `500 ${fontPx}px -apple-system, "Helvetica Neue", "PingFang SC", sans-serif`
+  c.font = `500 ${fontPx}px ${FONT_UI}`
   c.textBaseline = 'middle'
 
   const centerY = pad + H + bottomExtra / 2
@@ -127,7 +131,7 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   // 底部签名文字
   const fontPx = Math.round(long * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `italic 500 ${fontPx}px "Snell Roundhand", "Zapfino", "STXingkai", cursive`
+  c.font = `italic 500 ${fontPx}px ${FONT_HAND}`
   c.textAlign = 'center'
   c.textBaseline = 'middle'
   const line = config.customText || exif.dateTaken || ''
@@ -171,7 +175,7 @@ function renderFilm({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   // 底部胶片编号 + EXIF
   const fontPx = Math.round(long * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `${fontPx}px "SF Mono", "Menlo", monospace`
+  c.font = `${fontPx}px ${FONT_MONO}`
   c.textBaseline = 'middle'
 
   // 左下：帧号（用 dateTaken 后 4 位或随机）
@@ -224,11 +228,11 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
   c.textAlign = 'left'
 
   const modelText = exif.model || '—'
-  c.font = `600 ${Math.round(fontPx * 1.2)}px -apple-system, "Helvetica Neue", "PingFang SC", sans-serif`
+  c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
   c.fillText(modelText, leftX, centerY - fontPx * 0.5)
 
   c.fillStyle = 'rgba(255,255,255,0.55)'
-  c.font = `400 ${Math.round(fontPx * 0.85)}px -apple-system, sans-serif`
+  c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
   const lensText = exif.lens || config.customText || ''
   if (lensText) c.fillText(lensText, leftX, centerY + fontPx * 0.7)
 
@@ -248,10 +252,10 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
       const b = rightBlocks[i]
       c.textAlign = 'right'
       c.fillStyle = config.textColor
-      c.font = `600 ${blockFontValue}px "SF Mono", -apple-system, sans-serif`
+      c.font = `500 ${blockFontValue}px ${FONT_MONO}`
       c.fillText(b.value, rightX, centerY - blockFontLabel * 0.5)
       c.fillStyle = 'rgba(255,255,255,0.55)'
-      c.font = `400 ${blockFontLabel}px -apple-system, sans-serif`
+      c.font = `400 ${blockFontLabel}px ${FONT_UI}`
       c.fillText(b.label, rightX, centerY + blockFontValue * 0.6)
       const blockW = Math.max(c.measureText(b.value).width, c.measureText(b.label).width)
       rightX -= blockW + gap
@@ -319,11 +323,11 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   }
   c.fillStyle = config.textColor
   c.textAlign = 'left'
-  c.font = `600 ${Math.round(fontPx * 1.1)}px -apple-system, sans-serif`
+  c.font = `600 ${Math.round(fontPx * 1.1)}px ${FONT_UI}`
   const title = config.customText || exif.model || ''
   if (title) c.fillText(title, leftX, centerY - fontPx * 0.5)
   c.fillStyle = 'rgba(0,0,0,0.5)'
-  c.font = `400 ${Math.round(fontPx * 0.85)}px -apple-system, sans-serif`
+  c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
   const sub = formatExifLine(exif) || (exif.dateTaken ?? '')
   if (sub) c.fillText(sub, leftX, centerY + fontPx * 0.6)
 
@@ -361,18 +365,18 @@ function renderLeica({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
 
   // 红点旁的 LEICA 字样
   c.fillStyle = config.textColor
-  c.font = `700 ${Math.round(fontPx * 0.95)}px "Helvetica Neue", sans-serif`
+  c.font = `500 ${Math.round(fontPx * 0.95)}px ${FONT_DISPLAY}`
   c.textAlign = 'left'
   c.textBaseline = 'middle'
-  c.fillText('LEICA', padX + dotR * 2.8, centerY - fontPx * 0.5)
-  c.font = `300 ${Math.round(fontPx * 0.6)}px "Helvetica Neue", sans-serif`
-  c.fillStyle = 'rgba(255,255,255,0.7)'
-  c.fillText('CAMERA WETZLAR', padX + dotR * 2.8, centerY + fontPx * 0.55)
+  c.fillText('Leica', padX + dotR * 2.8, centerY - fontPx * 0.5)
+  c.font = `300 ${Math.round(fontPx * 0.5)}px ${FONT_UI}`
+  c.fillStyle = 'rgba(255,255,255,0.55)'
+  c.fillText('CAMERA · WETZLAR', padX + dotR * 2.8, centerY + fontPx * 0.55)
 
   // 右侧 EXIF 参数（右对齐）
   c.textAlign = 'right'
   c.fillStyle = config.textColor
-  c.font = `300 ${Math.round(fontPx * 0.8)}px "SF Mono", "Menlo", monospace`
+  c.font = `300 ${Math.round(fontPx * 0.8)}px ${FONT_MONO}`
   const exifText = config.customText || formatExifLine(exif) || (exif.model ?? '')
   c.fillText(exifText, W - padX, centerY)
 
@@ -398,7 +402,7 @@ function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   // 半透明背景块（提升可读性）
   const exifText = config.customText || formatExifLine(exif) || (exif.model ?? '')
   const modelText = exif.model || ''
-  c.font = `300 ${fontPx}px "SF Mono", "Menlo", monospace`
+  c.font = `300 ${fontPx}px ${FONT_MONO}`
   const textW = Math.max(c.measureText(exifText).width, c.measureText(modelText).width, 60)
   const blockW = textW + dotR * 6 + pad * 1.2
   const blockH = fontPx * 2.6
@@ -419,9 +423,9 @@ function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   c.fillStyle = config.textColor
   c.textAlign = 'left'
   c.textBaseline = 'middle'
-  c.font = `600 ${fontPx}px "Helvetica Neue", sans-serif`
+  c.font = `500 ${fontPx}px ${FONT_DISPLAY}`
   c.fillText(modelText, blockX + dotR * 3.5, blockY + blockH / 2 - fontPx * 0.55)
-  c.font = `300 ${Math.round(fontPx * 0.8)}px "SF Mono", monospace`
+  c.font = `300 ${Math.round(fontPx * 0.8)}px ${FONT_MONO}`
   c.fillStyle = 'rgba(255,255,255,0.85)'
   c.fillText(exifText, blockX + dotR * 3.5, blockY + blockH / 2 + fontPx * 0.55)
 
@@ -463,7 +467,7 @@ function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   // 侧边竖排文字（胶片编号 + 品牌）
   const fontPx = Math.round(long * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `500 ${fontPx}px "SF Mono", "Menlo", monospace`
+  c.font = `500 ${fontPx}px ${FONT_MONO}`
   c.textBaseline = 'middle'
   c.textAlign = 'center'
 
@@ -486,7 +490,7 @@ function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   // 右下角日期印字（橙色，仿旧式相机日期背印）
   if (exif.dateTaken) {
     const dateFont = Math.round(fontPx * 1.1)
-    c.font = `700 ${dateFont}px "Courier New", monospace`
+    c.font = `700 ${dateFont}px ${FONT_MONO}`
     c.fillStyle = config.textColor
     c.textAlign = 'right'
     c.textBaseline = 'bottom'
@@ -533,7 +537,7 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   // 底部手写签名
   const fontPx = Math.round(long * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `italic 500 ${fontPx}px "Snell Roundhand", "Zapfino", "STXingkai", cursive`
+  c.font = `italic 500 ${fontPx}px ${FONT_HAND}`
   c.textAlign = 'left'
   c.textBaseline = 'middle'
   const signature = config.customText || ''
@@ -544,7 +548,7 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   // 右下角日期小字
   if (exif.dateTaken) {
     const smallFont = Math.round(fontPx * 0.6)
-    c.font = `300 ${smallFont}px "Helvetica Neue", sans-serif`
+    c.font = `300 ${smallFont}px ${FONT_UI}`
     c.fillStyle = 'rgba(0,0,0,0.5)'
     c.textAlign = 'right'
     c.fillText(exif.dateTaken, canvas.width - sidePad * 1.2, canvas.height - sidePad * 0.8)
@@ -598,7 +602,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
   c.textBaseline = 'middle'
   c.textAlign = 'left'
   c.fillStyle = 'rgba(0,0,0,0.4)'
-  c.font = `400 ${Math.round(fontPx * 0.75)}px -apple-system, sans-serif`
+  c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_UI}`
   c.fillText('📕 小红书笔记', cardX + pad * 1.2, cardY + topArea / 2)
 
   // 顶部右：日期
@@ -620,12 +624,12 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
   const bottomY = imgY + H
   c.textAlign = 'left'
   c.fillStyle = config.textColor
-  c.font = `600 ${Math.round(fontPx * 1.15)}px -apple-system, "PingFang SC", sans-serif`
+  c.font = `500 ${Math.round(fontPx * 1.2)}px ${FONT_DISPLAY}`
   const title = config.customText || exif.model || '无标题'
   c.fillText(title, cardX + pad * 1.2, bottomY + bottomArea * 0.38)
 
   c.fillStyle = 'rgba(0,0,0,0.55)'
-  c.font = `400 ${Math.round(fontPx * 0.8)}px -apple-system, sans-serif`
+  c.font = `400 ${Math.round(fontPx * 0.8)}px ${FONT_UI}`
   const desc = formatExifLine(exif) || (exif.lens ?? '')
   if (desc) c.fillText(desc, cardX + pad * 1.2, bottomY + bottomArea * 0.68)
 
@@ -694,7 +698,7 @@ function renderVintage({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   // 底部签名
   const fontPx = Math.round(long * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `italic 500 ${fontPx}px "Snell Roundhand", "Zapfino", "STXingkai", cursive`
+  c.font = `italic 500 ${fontPx}px ${FONT_HAND}`
   c.textAlign = 'left'
   c.textBaseline = 'middle'
   const sig = config.customText || 'Vintage'
@@ -702,7 +706,7 @@ function renderVintage({ image, config, exif }: RenderCtx): HTMLCanvasElement {
 
   // 右下日期
   c.textAlign = 'right'
-  c.font = `300 ${Math.round(fontPx * 0.8)}px "Helvetica Neue", sans-serif`
+  c.font = `300 ${Math.round(fontPx * 0.8)}px ${FONT_UI}`
   if (exif.dateTaken) c.fillText(exif.dateTaken, canvas.width - pad * 1.3, pad + H + Math.round(long * 0.03))
 
   return canvas
@@ -732,18 +736,19 @@ function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 
   // ── 顶部：杂志标题 + 期号 ──
   c.textBaseline = 'middle'
-  c.fillStyle = config.textColor
-  c.font = `800 ${Math.round(fontPx * 1.8)}px "Helvetica Neue", "PingFang SC", sans-serif`
   c.textAlign = 'left'
+  c.fillStyle = config.textColor
+  c.font = `600 ${Math.round(fontPx * 1.8)}px ${FONT_DISPLAY}`
   c.fillText('PHOTO', padX, topBar / 2 - fontPx * 0.25)
-  c.font = `300 ${Math.round(fontPx * 1.8)}px "Helvetica Neue", sans-serif`
-  c.fillText('ZINE', padX + c.measureText('PHOTO').width + fontPx * 0.4, topBar / 2 - fontPx * 0.25)
+  const photoW = c.measureText('PHOTO').width
+  c.font = `300 ${Math.round(fontPx * 1.8)}px ${FONT_DISPLAY}`
+  c.fillText('ZINE', padX + photoW + fontPx * 0.4, topBar / 2 - fontPx * 0.25)
 
   // 右上：期号 + 日期
   c.textAlign = 'right'
-  c.font = `400 ${Math.round(fontPx * 0.7)}px "SF Mono", monospace`
-  c.fillStyle = 'rgba(0,0,0,0.6)'
-  const issue = `ISSUE ${exif.dateTaken?.replace(/\D/g, '').slice(-4) || '001'} · ${exif.dateTaken || ''}`
+  c.font = `400 ${Math.round(fontPx * 0.65)}px ${FONT_MONO}`
+  c.fillStyle = 'rgba(0,0,0,0.55)'
+  const issue = `ISSUE ${exif.dateTaken?.replace(/\D/g, '').slice(-4) || '001'}  ·  ${exif.dateTaken || ''}`
   c.fillText(issue, W - padX, topBar / 2 - fontPx * 0.25)
 
   // 顶部分隔线
@@ -764,18 +769,18 @@ function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 
   c.textAlign = 'left'
   c.fillStyle = config.textColor
-  c.font = `500 ${Math.round(fontPx * 0.9)}px "Helvetica Neue", sans-serif`
+  c.font = `500 ${Math.round(fontPx * 0.95)}px ${FONT_DISPLAY}`
   const title = config.customText || exif.model || 'Untitled'
-  c.fillText(title.toUpperCase(), padX, bottomY + bottomBar * 0.4)
+  c.fillText(title, padX, bottomY + bottomBar * 0.4)
 
   c.fillStyle = 'rgba(0,0,0,0.55)'
-  c.font = `300 ${Math.round(fontPx * 0.7)}px "Helvetica Neue", sans-serif`
+  c.font = `300 ${Math.round(fontPx * 0.7)}px ${FONT_UI}`
   const desc = formatExifLine(exif) || (exif.lens ?? '')
   if (desc) c.fillText(desc, padX, bottomY + bottomBar * 0.7)
 
   // 右下：页码
   c.textAlign = 'right'
-  c.font = `400 ${Math.round(fontPx * 0.7)}px "SF Mono", monospace`
+  c.font = `400 ${Math.round(fontPx * 0.7)}px ${FONT_MONO}`
   c.fillStyle = 'rgba(0,0,0,0.5)'
   c.fillText('— 01 / 01 —', W - padX, bottomY + bottomBar * 0.55)
 
@@ -815,10 +820,10 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
   c.textBaseline = 'middle'
   c.textAlign = 'left'
   c.fillStyle = config.textColor
-  c.font = `600 ${Math.round(fontPx * 1.1)}px -apple-system, sans-serif`
+  c.font = `500 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
   c.fillText(exif.model || '—', leftX, centerY - fontPx * 0.45)
   c.fillStyle = 'rgba(255,255,255,0.55)'
-  c.font = `400 ${Math.round(fontPx * 0.75)}px -apple-system, sans-serif`
+  c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_UI}`
   const lens = exif.lens || formatExifLine(exif) || ''
   if (lens) c.fillText(lens, leftX, centerY + fontPx * 0.55)
 
@@ -826,12 +831,12 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
   c.textAlign = 'right'
   const locationName = config.locationName || config.customText || ''
   c.fillStyle = config.textColor
-  c.font = `500 ${Math.round(fontPx * 1.0)}px -apple-system, "PingFang SC", sans-serif`
+  c.font = `500 ${Math.round(fontPx * 1.0)}px ${FONT_DISPLAY}`
   if (locationName) {
     c.fillText(`📍 ${locationName}`, W - padX, centerY - fontPx * 0.45)
   }
   c.fillStyle = 'rgba(255,255,255,0.55)'
-  c.font = `300 ${Math.round(fontPx * 0.75)}px "SF Mono", monospace`
+  c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_MONO}`
   if (exif.dateTaken) {
     c.fillText(exif.dateTaken, W - padX, centerY + fontPx * 0.55)
   }

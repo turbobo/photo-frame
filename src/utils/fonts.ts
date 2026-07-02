@@ -1,0 +1,98 @@
+// 水印字体系统 —— 4 套字体栈
+// 字体已在 main.tsx 中通过 @fontsource 注入
+
+/**
+ * Display — 思源宋体
+ * 用于：相机型号、品牌名、大标题
+ * 特点：优雅、文艺、画廊级高级感
+ */
+export const FONT_DISPLAY = '"Noto Serif SC", "Songti SC", "Source Han Serif SC", "STSong", serif'
+
+/**
+ * UI Sans — Inter
+ * 用于：副标题、地点、标签、次要文字
+ * 特点：干净、现代、可读性极佳
+ */
+export const FONT_UI = '"Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif'
+
+/**
+ * Mono — JetBrains Mono
+ * 用于：EXIF 参数（光圈/快门/ISO）、胶片编号、日期
+ * 特点：tabular nums、等宽对齐、技术感
+ */
+export const FONT_MONO = '"JetBrains Mono", "SF Mono", "Menlo", monospace'
+
+/**
+ * Hand — 霞鹜文楷
+ * 用于：手写签名、拍立得文字、复古纸相框
+ * 特点：优雅中文楷体、有温度
+ */
+export const FONT_HAND = '"LXGW WenKai Mono TC", "STKaiti", "Kaiti SC", "Kaiti", cursive'
+
+// ────────────────────────────────────────────────
+// 排版工具
+// ────────────────────────────────────────────────
+
+/** 根据字号生成带 letter-spacing 的 CSS font shorthand */
+export function fontStr(
+  weight: number,
+  size: number,
+  family: string,
+  spacing = 0,
+): string {
+  const ls = spacing !== 0 ? `${spacing}em` : '0'
+  // Note: letter-spacing 在 canvas 里通过 ctx.letterSpacing 设置
+  void ls
+  return `${weight} ${size}px ${family}`
+}
+
+/** 水印排版常量 */
+export const WATERMARK = {
+  // 字号比例（相对于图片长边）
+  SCALE: {
+    title: 1.0,      // 标题基准
+    sub:   0.7,      // 副标 70%
+    param: 0.6,      // 参数 60%
+    label: 0.45,     // 标签 45%
+    signature: 1.1,  // 签名 110%（手写体偏小）
+  },
+  // 颜色透明度
+  OPACITY: {
+    primary:   1.0,   // 主色
+    secondary: 0.75,  // 次色
+    tertiary:  0.55,  // 参色
+    label:     0.5,   // 标签
+  },
+  // Letter-spacing（em）
+  SPACING: {
+    title: 0.04,   // 标题宽字距
+    sub:   0.02,   // 副标微宽
+    param: 0,      // 参数对齐（tabular nums）
+    label: 0.08,   // 标签大写宽字距
+  },
+} as const
+
+/** 混合颜色与透明度（#RRGGBB + alpha → rgba） */
+export function withAlpha(hex: string, alpha: number): string {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return hex
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
+/** 拼装 EXIF 参数（用 · 分隔，更优雅） */
+export function formatExifLine(exif: {
+  focalLength?: number
+  fNumber?: number
+  exposureTime?: string
+  iso?: number
+}): string {
+  const parts: string[] = []
+  if (exif.focalLength) parts.push(`${Math.round(exif.focalLength)}mm`)
+  if (exif.fNumber) parts.push(`f/${exif.fNumber}`)
+  if (exif.exposureTime) parts.push(exif.exposureTime)
+  if (exif.iso) parts.push(`ISO${exif.iso}`)
+  return parts.join('  ·  ')
+}

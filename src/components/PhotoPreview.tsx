@@ -13,7 +13,6 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
   const [rendered, setRendered] = useState<HTMLCanvasElement | null>(null)
   const [scale, setScale] = useState(1)
 
-  // 渲染
   useEffect(() => {
     const canvas = renderFrame({
       image: photo.image,
@@ -24,13 +23,12 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
     setRendered(canvas)
   }, [photo, config, logo])
 
-  // 自适应缩放
   useEffect(() => {
     const el = containerRef.current
     if (!el || !rendered) return
     const compute = () => {
       const rect = el.getBoundingClientRect()
-      const pad = 40
+      const pad = 56
       const availW = rect.width - pad * 2
       const availH = rect.height - pad * 2
       const s = Math.min(availW / rendered.width, availH / rendered.height, 1)
@@ -48,18 +46,18 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
   }, [rendered, scale])
 
   return (
-    <div ref={containerRef} className="flex-1 checker overflow-auto flex items-center justify-center relative">
+    <div ref={containerRef} className="h-full w-full flex items-center justify-center p-10 bg-canvas relative">
       {rendered && (
         <div
-          className="fade-in shadow-2xl shadow-black/50 rounded-sm"
+          className="fade-in shadow-elev rounded"
           style={{ width: size.w, height: size.h }}>
           <PreviewCanvas source={rendered} width={size.w} height={size.h} />
         </div>
       )}
       {rendered && (
-        <div className="absolute bottom-3 right-3 bg-slate-900/70 backdrop-blur px-2.5 py-1 rounded-md text-[11px] text-slate-300 flex items-center gap-2">
+        <div className="absolute bottom-4 right-4 bg-surface border border-border px-2.5 py-1 rounded text-[10px] font-mono text-text-2 flex items-center gap-2 shadow-card">
           <span>{rendered.width} × {rendered.height}</span>
-          <span className="text-slate-500">|</span>
+          <span className="text-border-strong">/</span>
           <span>{Math.round(scale * 100)}%</span>
         </div>
       )}
