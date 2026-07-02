@@ -78,7 +78,7 @@ function StylePanel({ config, onChange }: { config: TemplateConfig; onChange: (p
       <section className="space-y-4">
         <SectionLabel>尺寸</SectionLabel>
 
-        <RangeRow label="边距" value={config.padding} min={0} max={20} step={0.5}
+        <RangeRow label="边距" value={config.padding} min={2} max={20} step={0.5}
           suffix="%" onChange={v => onChange({ padding: v })} />
         <RangeRow label="字号" value={config.fontSize} min={1} max={5} step={0.1}
           suffix="%" onChange={v => onChange({ fontSize: v })} />

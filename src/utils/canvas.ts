@@ -15,23 +15,34 @@ export interface RenderCtx {
 /**
  * 主入口：根据 config.id 分发到对应渲染器
  * 返回一个 offscreen canvas，用于预览与导出
+ *
+ * 防御性处理：强制 padding ≥ 2%，避免极小值触发渲染异常
  */
 export function renderFrame(ctx: RenderCtx): HTMLCanvasElement {
-  switch (ctx.config.id) {
-    case 'minimal':  return renderMinimal(ctx)
-    case 'polaroid': return renderPolaroid(ctx)
-    case 'film':     return renderFilm(ctx)
-    case 'exif':     return renderExif(ctx)
-    case 'insta':    return renderInsta(ctx)
-    case 'leica':    return renderLeica(ctx)
-    case 'red-dot':  return renderRedDot(ctx)
-    case 'dazz':     return renderDazz(ctx)
-    case 'instax':   return renderInstax(ctx)
-    case 'xhs':      return renderXhs(ctx)
-    case 'vintage':  return renderVintage(ctx)
-    case 'magazine': return renderMagazine(ctx)
-    case 'location': return renderLocation(ctx)
-    default:         return renderMinimal(ctx)
+  const safePadding = Math.max(2, ctx.config.padding)
+  const safeFontSize = Math.max(1, ctx.config.fontSize)
+  const safeConfig = {
+    ...ctx.config,
+    padding: safePadding,
+    fontSize: safeFontSize,
+  }
+  const safeCtx = { ...ctx, config: safeConfig }
+
+  switch (safeConfig.id) {
+    case 'minimal':  return renderMinimal(safeCtx)
+    case 'polaroid': return renderPolaroid(safeCtx)
+    case 'film':     return renderFilm(safeCtx)
+    case 'exif':     return renderExif(safeCtx)
+    case 'insta':    return renderInsta(safeCtx)
+    case 'leica':    return renderLeica(safeCtx)
+    case 'red-dot':  return renderRedDot(safeCtx)
+    case 'dazz':     return renderDazz(safeCtx)
+    case 'instax':   return renderInstax(safeCtx)
+    case 'xhs':      return renderXhs(safeCtx)
+    case 'vintage':  return renderVintage(safeCtx)
+    case 'magazine': return renderMagazine(safeCtx)
+    case 'location': return renderLocation(safeCtx)
+    default:         return renderMinimal(safeCtx)
   }
 }
 
@@ -145,7 +156,9 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
 // ═══════════════════════════════════════════════════════
 function renderFilm({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
-  const pad = Math.round(long * config.padding / 100)
+  // 强制最小边距，避免 holeGap = 0 导致死循环
+  const minPad = Math.max(16, Math.round(long * 0.008))
+  const pad = Math.max(minPad, Math.round(long * config.padding / 100))
 
   const canvas = document.createElement('canvas')
   canvas.width = W + pad * 2
@@ -159,14 +172,17 @@ function renderFilm({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 
   // 齿孔（上下各一排）
   const holeR = pad * 0.18
-  const holeGap = pad * 1.6
+  const holeGap = Math.max(1, pad * 1.6)
   c.fillStyle = '#000'
   const drawHoles = (yCenter: number) => {
-    for (let x = pad + holeGap; x < canvas.width - pad - holeGap; x += holeGap) {
+    const maxIter = 200 // 绝对上限防止意外
+    let iter = 0
+    for (let x = pad + holeGap; x < canvas.width - pad - holeGap && iter < maxIter; x += holeGap) {
       c.beginPath()
       c.arc(x, yCenter, holeR, 0, Math.PI * 2)
       c.fillStyle = 'rgba(255,255,255,0.85)'
       c.fill()
+      iter++
     }
   }
   drawHoles(pad / 2)
@@ -437,7 +453,9 @@ function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 // ═══════════════════════════════════════════════════════
 function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
-  const pad = Math.round(long * config.padding / 100)
+  // 强制最小边距，避免 holeGap = 0 导致死循环
+  const minPad = Math.max(20, Math.round(long * 0.01))
+  const pad = Math.max(minPad, Math.round(long * config.padding / 100))
 
   const canvas = document.createElement('canvas')
   canvas.width = W + pad * 2
@@ -453,12 +471,15 @@ function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   // 齿孔（上下两排，矩形 + 圆角）
   const holeW = pad * 0.28
   const holeH = pad * 0.36
-  const holeGap = pad * 1.1
+  const holeGap = Math.max(1, pad * 1.1)
   c.fillStyle = 'rgba(240,235,220,0.92)'
   const drawHoleRow = (yCenter: number) => {
-    for (let x = pad + holeGap * 0.8; x < canvas.width - pad - holeGap * 0.5; x += holeGap) {
+    const maxIter = 200
+    let iter = 0
+    for (let x = pad + holeGap * 0.8; x < canvas.width - pad - holeGap * 0.5 && iter < maxIter; x += holeGap) {
       roundRect(c, x - holeW / 2, yCenter - holeH / 2, holeW, holeH, holeW * 0.25)
       c.fill()
+      iter++
     }
   }
   drawHoleRow(pad / 2)
