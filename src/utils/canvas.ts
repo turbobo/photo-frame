@@ -455,7 +455,7 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   const c = canvas.getContext('2d')!
 
   // 全画布背景（半透明遮罩）
-  c.fillStyle = '#b8b3ad'
+  c.fillStyle = '#fafaf9'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
   // 卡片 + 三层阴影
@@ -762,7 +762,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
   const c = canvas.getContext('2d')!
 
   // 画布背景
-  c.fillStyle = '#b8b3ad'
+  c.fillStyle = '#fafaf9'
   c.fillRect(0, 0, canvas.width, canvas.height)
 
   // 卡片 + 三层阴影

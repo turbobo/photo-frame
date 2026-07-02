@@ -6,8 +6,8 @@ export default {
       colors: {
         // 基础色板（Stone 暖灰）
         surface:        '#ffffff',            // 卡片、侧栏、按钮背景
-        canvas:         '#a8a39d',            // 预览区主背景（中灰）
-        'canvas-soft':  '#b8b3ad',            // 画布浅色层（用于渲染器外围背景）
+        canvas:         '#f5f5f4',            // 预览区主背景（近白，参考 Copicseal）
+        'canvas-soft':  '#fafaf9',            // 画布浅色层
         border:         '#e7e5e4',            // 普通边框
         'border-strong':'#d6d3d1',            // 强调边框
         // 文字层级

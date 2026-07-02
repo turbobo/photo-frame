@@ -71,26 +71,30 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
               backgroundSize: '110% 110%',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
-              filter: 'blur(80px) saturate(1.35) brightness(0.85)',
-              opacity: 0.55,
+              filter: 'blur(100px) saturate(1.2) brightness(1.05)',
+              opacity: 0.3,
               transform: 'scale(1.08)', // 放大避免模糊边缘露白
             }}
             aria-hidden="true"
           />
-          {/* 深色叠加层 —— 轻微压暗 + 增强前景照片对比度 */}
+          {/* 极浅叠加层 —— 保持近白画布的纯净感 */}
           <div
             className="absolute inset-0"
-            style={{ background: 'rgba(28, 25, 23, 0.04)' }}
+            style={{ background: 'rgba(250, 250, 249, 0.5)' }}
             aria-hidden="true"
           />
         </>
       )}
 
-      {/* 主图（前景） */}
+      {/* 主图（前景）—— 细边框 + 柔阴影，像真实相框 */}
       {rendered && (
         <div
-          className="relative fade-in shadow-elev rounded z-10"
-          style={{ width: size.w, height: size.h }}>
+          className="relative fade-in rounded-md z-10 ring-1 ring-black/5"
+          style={{
+            width: size.w,
+            height: size.h,
+            boxShadow: '0 8px 24px rgba(28,25,23,0.12), 0 2px 6px rgba(28,25,23,0.06)',
+          }}>
           <PreviewCanvas source={rendered} width={size.w} height={size.h} />
         </div>
       )}
