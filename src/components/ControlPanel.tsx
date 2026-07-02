@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { PhotoData, TemplateConfig } from '../types'
 import { TEMPLATES, TEMPLATE_GROUPS } from '../templates'
+import { renderFrame } from '../utils/canvas'
 
 interface Props {
   photo: PhotoData | null
@@ -11,21 +12,56 @@ interface Props {
   loading?: boolean
 }
 
-type Tab = 'style' | 'info' | 'export'
+type Tab = 'style' | 'info'
 
 export default function ControlPanel({ photo, config, onChange, logo, onReplace, loading }: Props) {
   const [tab, setTab] = useState<Tab>('style')
 
+  // 导出状态（独立于 tab，跨 tab 保持）
+  const [size, setSize] = useState('orig')
+  const [format, setFormat] = useState('jpeg')
+  const [quality, setQuality] = useState(0.92)
+  const [busy, setBusy] = useState(false)
+
   const patch = (p: Partial<TemplateConfig>) => onChange({ ...config, ...p })
+
+  const handleExport = async () => {
+    if (!photo) return
+    setBusy(true)
+    try {
+      const source = renderFrame({ image: photo.image, exif: photo.exif, logo, config })
+      const sizeOpt = SIZE_OPTIONS.find(o => o.key === size)!
+      let target = source
+      if (sizeOpt.longEdge && Math.max(source.width, source.height) > sizeOpt.longEdge) {
+        const s = sizeOpt.longEdge / Math.max(source.width, source.height)
+        const c = document.createElement('canvas')
+        c.width = Math.round(source.width * s)
+        c.height = Math.round(source.height * s)
+        const ctx = c.getContext('2d')!
+        ctx.imageSmoothingQuality = 'high'
+        ctx.drawImage(source, 0, 0, c.width, c.height)
+        target = c
+      }
+      const mime = FORMATS.find(f => f.key === format)!.mime
+      const blob = await new Promise<Blob | null>(r => target.toBlob(r, mime, quality))
+      if (!blob) return
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      const ext = format === 'jpeg' ? 'jpg' : format
+      const base = photo.originalName.replace(/\.[^.]+$/, '')
+      a.href = url; a.download = `${base}-${config.id}.${ext}`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 5000)
+    } finally { setBusy(false) }
+  }
 
   return (
     <div className="flex flex-col h-full">
       {/* Tabs */}
-      <div className="px-6 pt-5 pb-4 border-b border-border">
+      <div className="px-6 pt-5 pb-4 border-b border-border shrink-0">
         <div className="segment w-full">
-          <button data-active={tab === 'style'}  onClick={() => setTab('style')}>样式</button>
-          <button data-active={tab === 'info'}   onClick={() => setTab('info')}>信息</button>
-          <button data-active={tab === 'export'} onClick={() => setTab('export')}>导出</button>
+          <button data-active={tab === 'style'} onClick={() => setTab('style')}>样式</button>
+          <button data-active={tab === 'info'}  onClick={() => setTab('info')}>信息</button>
           {onReplace && (
             <button
               onClick={() => {
@@ -54,18 +90,89 @@ export default function ControlPanel({ photo, config, onChange, logo, onReplace,
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        {tab === 'style' && <StylePanel config={config} onChange={patch} />}
+        {tab === 'style' && <StylePanel config={config} onChange={patch} quality={quality} setQuality={setQuality} format={format} />}
         {tab === 'info'   && <InfoPanel photo={photo} />}
-        {tab === 'export' && <ExportPanel photo={photo} config={config} logo={logo} />}
+      </div>
+
+      {/* ─── 常驻导出栏（sticky footer）─── */}
+      <div className="shrink-0 border-t border-border bg-surface px-5 py-4 space-y-3">
+        {/* 格式 */}
+        <div className="flex items-center gap-2">
+          <span className="font-caption text-text-3 w-10 shrink-0">格式</span>
+          <div className="segment flex-1">
+            {FORMATS.map(f => (
+              <button key={f.key} data-active={format === f.key}
+                onClick={() => setFormat(f.key)}
+                className="flex-1">{f.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* 尺寸 */}
+        <div className="flex items-center gap-2">
+          <span className="font-caption text-text-3 w-10 shrink-0">尺寸</span>
+          <div className="segment flex-1">
+            {SIZE_OPTIONS.map(o => (
+              <button key={o.key} data-active={size === o.key}
+                onClick={() => setSize(o.key)}
+                className="flex-1">{o.label}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* 下载按钮 */}
+        <button
+          onClick={handleExport}
+          disabled={!photo || busy}
+          className="btn-primary w-full py-2.5 rounded-md text-[13px] font-medium flex items-center justify-center gap-2">
+          {busy ? (
+            <>
+              <div className="w-3 h-3 rounded-full border-[1.5px] border-white border-t-transparent animate-spin"/>
+              导出中…
+            </>
+          ) : (
+            <>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              {photo ? `下载 ${format === 'jpeg' ? 'JPG' : format.toUpperCase()}` : '下载'}
+            </>
+          )}
+        </button>
       </div>
     </div>
   )
 }
 
 // ═══════════════════════════════════════════════════════
+// Export constants
+// ═══════════════════════════════════════════════════════
+const SIZE_OPTIONS = [
+  { key: 'orig', label: '原图', longEdge: 0 },
+  { key: '3840', label: '4K',   longEdge: 3840 },
+  { key: '2048', label: '2K',   longEdge: 2048 },
+  { key: '1080', label: '1080', longEdge: 1080 },
+]
+const FORMATS = [
+  { key: 'jpeg', label: 'JPG',  mime: 'image/jpeg' },
+  { key: 'png',  label: 'PNG',  mime: 'image/png' },
+  { key: 'webp', label: 'WebP', mime: 'image/webp' },
+]
+
+// ═══════════════════════════════════════════════════════
 // Style Tab
 // ═══════════════════════════════════════════════════════
-function StylePanel({ config, onChange }: { config: TemplateConfig; onChange: (p: Partial<TemplateConfig>) => void }) {
+function StylePanel({
+  config, onChange, quality, setQuality, format,
+}: {
+  config: TemplateConfig
+  onChange: (p: Partial<TemplateConfig>) => void
+  quality: number
+  setQuality: (v: number) => void
+  format: string
+}) {
   return (
     <div className="p-6 space-y-7">
       {/* Templates grid */}
@@ -102,6 +209,14 @@ function StylePanel({ config, onChange }: { config: TemplateConfig; onChange: (p
         <ToggleRow label="EXIF 信息" value={config.showExif} onChange={v => onChange({ showExif: v })} />
         <ToggleRow label="卡片阴影" value={config.shadow} onChange={v => onChange({ shadow: v })} />
       </section>
+
+      {/* Quality (only for lossy formats) */}
+      {format !== 'png' && (
+        <section>
+          <RangeRow label="质量" value={Math.round(quality * 100)} min={50} max={100} step={2}
+            suffix="%" onChange={v => setQuality(v / 100)} />
+        </section>
+      )}
 
       {/* Custom text */}
       <section>
@@ -152,9 +267,7 @@ function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: 
                       : 'border-border bg-canvas hover:border-text-3'
                     }`}
                   title={t.name + ' · ' + t.desc}>
-                  {/* Miniature preview illustration */}
                   <TemplateThumb id={t.id} />
-                  {/* Name */}
                   <div className="absolute inset-x-0 bottom-0 text-[9px] py-0.5 text-center truncate bg-white/80 backdrop-blur">
                     <span className={selectedId === t.id ? 'text-text font-medium' : 'text-text-2'}>
                       {t.name}
@@ -236,116 +349,6 @@ function InfoPanel({ photo }: { photo: PhotoData | null }) {
           </div>
         ))}
       </div>
-    </div>
-  )
-}
-
-// ═══════════════════════════════════════════════════════
-// Export Tab
-// ═══════════════════════════════════════════════════════
-import { renderFrame } from '../utils/canvas'
-
-const SIZE_OPTIONS = [
-  { key: 'orig', label: '原图', longEdge: 0 },
-  { key: '3840', label: '4K', longEdge: 3840 },
-  { key: '2048', label: '2K', longEdge: 2048 },
-  { key: '1080', label: '1080', longEdge: 1080 },
-]
-const FORMATS = [
-  { key: 'jpeg', label: 'JPG', mime: 'image/jpeg' },
-  { key: 'png',  label: 'PNG', mime: 'image/png' },
-  { key: 'webp', label: 'WebP', mime: 'image/webp' },
-]
-
-function ExportPanel({ photo, config, logo }: { photo: PhotoData | null; config: TemplateConfig; logo: HTMLImageElement | null }) {
-  const [size, setSize] = useState('orig')
-  const [format, setFormat] = useState('jpeg')
-  const [quality, setQuality] = useState(0.92)
-  const [busy, setBusy] = useState(false)
-
-  const handleExport = async () => {
-    if (!photo) return
-    setBusy(true)
-    try {
-      const source = renderFrame({ image: photo.image, exif: photo.exif, logo, config })
-      const opt = SIZE_OPTIONS.find(o => o.key === size)!
-      let target = source
-      if (opt.longEdge && Math.max(source.width, source.height) > opt.longEdge) {
-        const s = opt.longEdge / Math.max(source.width, source.height)
-        const c = document.createElement('canvas')
-        c.width = Math.round(source.width * s)
-        c.height = Math.round(source.height * s)
-        const ctx = c.getContext('2d')!
-        ctx.imageSmoothingQuality = 'high'
-        ctx.drawImage(source, 0, 0, c.width, c.height)
-        target = c
-      }
-      const mime = FORMATS.find(f => f.key === format)!.mime
-      const blob = await new Promise<Blob | null>(r => target.toBlob(r, mime, quality))
-      if (!blob) return
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      const ext = format === 'jpeg' ? 'jpg' : format
-      const base = photo.originalName.replace(/\.[^.]+$/, '')
-      a.href = url; a.download = `${base}-${config.id}.${ext}`
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(url), 5000)
-    } finally { setBusy(false) }
-  }
-
-  if (!photo) return <EmptyState label="先上传一张照片" />
-
-  return (
-    <div className="p-6 space-y-6">
-      <section>
-        <SectionLabel>尺寸</SectionLabel>
-        <div className="segment w-full">
-          {SIZE_OPTIONS.map(o => (
-            <button key={o.key} data-active={size === o.key}
-              onClick={() => setSize(o.key)}
-              className="flex-1">{o.label}</button>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <SectionLabel>格式</SectionLabel>
-        <div className="segment w-full">
-          {FORMATS.map(f => (
-            <button key={f.key} data-active={format === f.key}
-              onClick={() => setFormat(f.key)}
-              className="flex-1">{f.label}</button>
-          ))}
-        </div>
-      </section>
-
-      {format !== 'png' && (
-        <section>
-          <RangeRow label="质量" value={Math.round(quality * 100)} min={50} max={100} step={2}
-            suffix="%" onChange={v => setQuality(v / 100)} />
-        </section>
-      )}
-
-      <button
-        onClick={handleExport}
-        disabled={busy}
-        className="btn-primary w-full py-2.5 rounded-md text-[13px] font-medium flex items-center justify-center gap-2">
-        {busy ? (
-          <>
-            <div className="w-3 h-3 rounded-full border-[1.5px] border-white border-t-transparent animate-spin"/>
-            导出中…
-          </>
-        ) : (
-          <>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            下载 {format.toUpperCase()}
-          </>
-        )}
-      </button>
     </div>
   )
 }
