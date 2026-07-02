@@ -85,6 +85,19 @@ export default function TemplateEditor({ config, onChange }: Props) {
           placeholder="如 摄影师 / 地点 / 日期"
           className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-[13px] text-slate-200 outline-none focus:border-sky-500 transition-colors"/>
       </div>
+
+      {/* 地理水印专用：地点名 */}
+      {config.id === 'location' && (
+        <div>
+          <p className="text-[12px] text-slate-400 mb-1.5">📍 地点名（地理水印专用）</p>
+          <input
+            type="text"
+            value={config.locationName || ''}
+            onChange={e => patch({ locationName: e.target.value })}
+            placeholder="如 北京·故宫 / 上海·外滩"
+            className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-[13px] text-slate-200 outline-none focus:border-sky-500 transition-colors"/>
+        </div>
+      )}
     </div>
   )
 }

@@ -12,7 +12,9 @@ export interface ExifData {
   height?: number
 }
 
-export type TemplateId = 'minimal' | 'polaroid' | 'film' | 'exif' | 'insta'
+export type TemplateId =
+  | 'minimal' | 'polaroid' | 'film' | 'exif' | 'insta'
+  | 'leica' | 'red-dot' | 'dazz' | 'instax' | 'xhs' | 'vintage' | 'magazine' | 'location'
 
 export interface TemplateConfig {
   id: TemplateId
@@ -26,6 +28,7 @@ export interface TemplateConfig {
   logoSize: number     // 相对图片长边的百分比 (2-10)
   radius: number       // 0-50 px
   shadow: boolean
+  locationName?: string // 用于 location 模板的地点名
 }
 
 export interface PhotoData {

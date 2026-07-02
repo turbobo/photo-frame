@@ -1,4 +1,4 @@
-// Canvas 渲染核心 —— 5 种边框模板绘制
+// Canvas 渲染核心 —— 13 种边框模板绘制
 import type { ExifData, TemplateConfig } from '../types'
 
 export interface RenderCtx {
@@ -19,6 +19,14 @@ export function renderFrame(ctx: RenderCtx): HTMLCanvasElement {
     case 'film':     return renderFilm(ctx)
     case 'exif':     return renderExif(ctx)
     case 'insta':    return renderInsta(ctx)
+    case 'leica':    return renderLeica(ctx)
+    case 'red-dot':  return renderRedDot(ctx)
+    case 'dazz':     return renderDazz(ctx)
+    case 'instax':   return renderInstax(ctx)
+    case 'xhs':      return renderXhs(ctx)
+    case 'vintage':  return renderVintage(ctx)
+    case 'magazine': return renderMagazine(ctx)
+    case 'location': return renderLocation(ctx)
     default:         return renderMinimal(ctx)
   }
 }
@@ -318,6 +326,515 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   c.font = `400 ${Math.round(fontPx * 0.85)}px -apple-system, sans-serif`
   const sub = formatExifLine(exif) || (exif.dateTaken ?? '')
   if (sub) c.fillText(sub, leftX, centerY + fontPx * 0.6)
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 6：Leica 徕卡栏 —— 底部黑色窄栏 + 红点 + 型号/EXIF
+// ═══════════════════════════════════════════════════════
+function renderLeica({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement {
+  const W = image.width, H = image.height, long = Math.max(W, H)
+  const barH = Math.round(long * 0.06)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H + barH
+  const c = canvas.getContext('2d')!
+
+  c.drawImage(image, 0, 0, W, H)
+
+  // 底部黑色栏
+  c.fillStyle = config.bgColor
+  c.fillRect(0, H, W, barH)
+
+  const fontPx = Math.round(long * config.fontSize / 100)
+  const centerY = H + barH / 2
+  const padX = Math.round(W * 0.025)
+
+  // 左侧红点（Leica 标志）
+  const dotR = barH * 0.22
+  c.fillStyle = '#e60012'
+  c.beginPath()
+  c.arc(padX + dotR * 1.2, centerY, dotR, 0, Math.PI * 2)
+  c.fill()
+
+  // 红点旁的 LEICA 字样
+  c.fillStyle = config.textColor
+  c.font = `700 ${Math.round(fontPx * 0.95)}px "Helvetica Neue", sans-serif`
+  c.textAlign = 'left'
+  c.textBaseline = 'middle'
+  c.fillText('LEICA', padX + dotR * 2.8, centerY - fontPx * 0.5)
+  c.font = `300 ${Math.round(fontPx * 0.6)}px "Helvetica Neue", sans-serif`
+  c.fillStyle = 'rgba(255,255,255,0.7)'
+  c.fillText('CAMERA WETZLAR', padX + dotR * 2.8, centerY + fontPx * 0.55)
+
+  // 右侧 EXIF 参数（右对齐）
+  c.textAlign = 'right'
+  c.fillStyle = config.textColor
+  c.font = `300 ${Math.round(fontPx * 0.8)}px "SF Mono", "Menlo", monospace`
+  const exifText = config.customText || formatExifLine(exif) || (exif.model ?? '')
+  c.fillText(exifText, W - padX, centerY)
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 7：Red Dot 红点水印 —— 悬浮在图片右下角（不扩画布）
+// ═══════════════════════════════════════════════════════
+function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
+  const W = image.width, H = image.height, long = Math.max(W, H)
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const c = canvas.getContext('2d')!
+
+  c.drawImage(image, 0, 0, W, H)
+
+  const fontPx = Math.round(long * config.fontSize / 100)
+  const pad = Math.round(long * 0.025)
+  const dotR = Math.round(long * 0.012)
+
+  // 半透明背景块（提升可读性）
+  const exifText = config.customText || formatExifLine(exif) || (exif.model ?? '')
+  const modelText = exif.model || ''
+  c.font = `300 ${fontPx}px "SF Mono", "Menlo", monospace`
+  const textW = Math.max(c.measureText(exifText).width, c.measureText(modelText).width, 60)
+  const blockW = textW + dotR * 6 + pad * 1.2
+  const blockH = fontPx * 2.6
+  const blockX = W - blockW - pad
+  const blockY = H - blockH - pad
+
+  c.fillStyle = 'rgba(0,0,0,0.35)'
+  roundRect(c, blockX, blockY, blockW, blockH, Math.round(long * 0.006))
+  c.fill()
+
+  // 红点
+  c.fillStyle = '#e60012'
+  c.beginPath()
+  c.arc(blockX + dotR * 1.6, blockY + blockH / 2, dotR, 0, Math.PI * 2)
+  c.fill()
+
+  // 文字
+  c.fillStyle = config.textColor
+  c.textAlign = 'left'
+  c.textBaseline = 'middle'
+  c.font = `600 ${fontPx}px "Helvetica Neue", sans-serif`
+  c.fillText(modelText, blockX + dotR * 3.5, blockY + blockH / 2 - fontPx * 0.55)
+  c.font = `300 ${Math.round(fontPx * 0.8)}px "SF Mono", monospace`
+  c.fillStyle = 'rgba(255,255,255,0.85)'
+  c.fillText(exifText, blockX + dotR * 3.5, blockY + blockH / 2 + fontPx * 0.55)
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 8：Dazz 胶卷 —— 仿 135 胶卷边框，上下齿孔 + 侧边文字 + 日期印字
+// ═══════════════════════════════════════════════════════
+function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
+  const W = image.width, H = image.height, long = Math.max(W, H)
+  const pad = Math.round(long * config.padding / 100)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W + pad * 2
+  canvas.height = H + pad * 2
+  const c = canvas.getContext('2d')!
+
+  // 黑色胶卷底
+  c.fillStyle = config.bgColor
+  c.fillRect(0, 0, canvas.width, canvas.height)
+
+  c.drawImage(image, pad, pad, W, H)
+
+  // 齿孔（上下两排，矩形 + 圆角）
+  const holeW = pad * 0.28
+  const holeH = pad * 0.36
+  const holeGap = pad * 1.1
+  c.fillStyle = 'rgba(240,235,220,0.92)'
+  const drawHoleRow = (yCenter: number) => {
+    for (let x = pad + holeGap * 0.8; x < canvas.width - pad - holeGap * 0.5; x += holeGap) {
+      roundRect(c, x - holeW / 2, yCenter - holeH / 2, holeW, holeH, holeW * 0.25)
+      c.fill()
+    }
+  }
+  drawHoleRow(pad / 2)
+  drawHoleRow(canvas.height - pad / 2)
+
+  // 侧边竖排文字（胶片编号 + 品牌）
+  const fontPx = Math.round(long * config.fontSize / 100)
+  c.fillStyle = config.textColor
+  c.font = `500 ${fontPx}px "SF Mono", "Menlo", monospace`
+  c.textBaseline = 'middle'
+  c.textAlign = 'center'
+
+  // 左侧竖排：品牌/型号
+  c.save()
+  c.translate(pad / 2, canvas.height / 2)
+  c.rotate(-Math.PI / 2)
+  const frame = exif.dateTaken?.replace(/\D/g, '').slice(-4) || '0036'
+  c.fillText(`FUJI SUPERIA 400  ▶  ${frame}`, 0, 0)
+  c.restore()
+
+  // 右侧竖排：EXIF
+  c.save()
+  c.translate(canvas.width - pad / 2, canvas.height / 2)
+  c.rotate(Math.PI / 2)
+  const exifLine = formatExifLine(exif) || (exif.model ?? '35mm')
+  c.fillText(`◀  ${exifLine}`, 0, 0)
+  c.restore()
+
+  // 右下角日期印字（橙色，仿旧式相机日期背印）
+  if (exif.dateTaken) {
+    const dateFont = Math.round(fontPx * 1.1)
+    c.font = `700 ${dateFont}px "Courier New", monospace`
+    c.fillStyle = config.textColor
+    c.textAlign = 'right'
+    c.textBaseline = 'bottom'
+    c.fillText(exif.dateTaken.replace(/-/g, '.'), W + pad - pad * 0.15, H + pad - pad * 0.15)
+  }
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 9：Instax 真实拍立得 —— 顶部窄边 + 底部超宽留白 + 签名 + 日期角标
+// ═══════════════════════════════════════════════════════
+function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
+  const W = image.width, H = image.height, long = Math.max(W, H)
+  const sidePad = Math.round(long * config.padding / 100)
+  const topPad = Math.round(sidePad * 0.8)
+  const bottomPad = Math.round(sidePad * 3.5)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W + sidePad * 2
+  canvas.height = H + topPad + bottomPad
+  const c = canvas.getContext('2d')!
+
+  // 米白底 + 微弱纸张纹理
+  c.fillStyle = config.bgColor
+  c.fillRect(0, 0, canvas.width, canvas.height)
+  const grain = c.createLinearGradient(0, 0, canvas.width, canvas.height)
+  grain.addColorStop(0, 'rgba(0,0,0,0.015)')
+  grain.addColorStop(0.5, 'rgba(0,0,0,0)')
+  grain.addColorStop(1, 'rgba(0,0,0,0.02)')
+  c.fillStyle = grain
+  c.fillRect(0, 0, canvas.width, canvas.height)
+
+  // 图像区域（轻微阴影）
+  c.save()
+  c.shadowColor = 'rgba(0,0,0,0.12)'
+  c.shadowBlur = sidePad * 0.3
+  c.shadowOffsetY = sidePad * 0.1
+  c.fillStyle = '#000'
+  c.fillRect(sidePad, topPad, W, H)
+  c.restore()
+  c.drawImage(image, sidePad, topPad, W, H)
+
+  // 底部手写签名
+  const fontPx = Math.round(long * config.fontSize / 100)
+  c.fillStyle = config.textColor
+  c.font = `italic 500 ${fontPx}px "Snell Roundhand", "Zapfino", "STXingkai", cursive`
+  c.textAlign = 'left'
+  c.textBaseline = 'middle'
+  const signature = config.customText || ''
+  if (signature) {
+    c.fillText(signature, sidePad * 1.2, topPad + H + bottomPad * 0.55)
+  }
+
+  // 右下角日期小字
+  if (exif.dateTaken) {
+    const smallFont = Math.round(fontPx * 0.6)
+    c.font = `300 ${smallFont}px "Helvetica Neue", sans-serif`
+    c.fillStyle = 'rgba(0,0,0,0.5)'
+    c.textAlign = 'right'
+    c.fillText(exif.dateTaken, canvas.width - sidePad * 1.2, canvas.height - sidePad * 0.8)
+  }
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 10：小红书 —— 3:4 白底卡片 + 圆角 + 标题 + 描述
+// ═══════════════════════════════════════════════════════
+function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement {
+  const W = image.width, H = image.height, long = Math.max(W, H)
+  const pad = Math.round(long * config.padding / 100)
+  const topArea = Math.round(long * 0.08)
+  const bottomArea = Math.round(long * 0.12)
+  const shadow = config.shadow ? Math.round(long * 0.025) : 0
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W + pad * 2 + shadow * 2
+  canvas.height = H + pad * 2 + topArea + bottomArea + shadow * 2
+  const c = canvas.getContext('2d')!
+
+  // 画布背景
+  c.fillStyle = '#fafafa'
+  c.fillRect(0, 0, canvas.width, canvas.height)
+
+  const cardX = shadow
+  const cardY = shadow
+  const cardW = canvas.width - shadow * 2
+  const cardH = canvas.height - shadow * 2
+
+  // 卡片 + 阴影
+  if (shadow > 0) {
+    c.save()
+    c.shadowColor = 'rgba(0,0,0,0.12)'
+    c.shadowBlur = shadow
+    c.shadowOffsetY = shadow / 2
+    c.fillStyle = config.bgColor
+    roundRect(c, cardX, cardY, cardW, cardH, config.radius)
+    c.fill()
+    c.restore()
+  } else {
+    c.fillStyle = config.bgColor
+    roundRect(c, cardX, cardY, cardW, cardH, config.radius)
+    c.fill()
+  }
+
+  // 顶部小标签（"小红书 · 图文")
+  const fontPx = Math.round(long * config.fontSize / 100)
+  c.textBaseline = 'middle'
+  c.textAlign = 'left'
+  c.fillStyle = 'rgba(0,0,0,0.4)'
+  c.font = `400 ${Math.round(fontPx * 0.75)}px -apple-system, sans-serif`
+  c.fillText('📕 小红书笔记', cardX + pad * 1.2, cardY + topArea / 2)
+
+  // 顶部右：日期
+  c.textAlign = 'right'
+  if (exif.dateTaken) {
+    c.fillText(exif.dateTaken, cardX + cardW - pad * 1.2, cardY + topArea / 2)
+  }
+
+  // 图片（圆角剪裁）
+  const imgX = cardX + pad
+  const imgY = cardY + topArea
+  c.save()
+  roundRect(c, imgX, imgY, W, H, Math.max(0, config.radius - pad * 0.3))
+  c.clip()
+  c.drawImage(image, imgX, imgY, W, H)
+  c.restore()
+
+  // 底部：标题 + 描述
+  const bottomY = imgY + H
+  c.textAlign = 'left'
+  c.fillStyle = config.textColor
+  c.font = `600 ${Math.round(fontPx * 1.15)}px -apple-system, "PingFang SC", sans-serif`
+  const title = config.customText || exif.model || '无标题'
+  c.fillText(title, cardX + pad * 1.2, bottomY + bottomArea * 0.38)
+
+  c.fillStyle = 'rgba(0,0,0,0.55)'
+  c.font = `400 ${Math.round(fontPx * 0.8)}px -apple-system, sans-serif`
+  const desc = formatExifLine(exif) || (exif.lens ?? '')
+  if (desc) c.fillText(desc, cardX + pad * 1.2, bottomY + bottomArea * 0.68)
+
+  // 右下：Logo 小标
+  if (config.showLogo && logo) {
+    const lh = Math.round(long * config.logoSize / 100 * 0.8)
+    const lw = lh * (logo.width / logo.height)
+    c.drawImage(logo, cardX + cardW - pad * 1.2 - lw, bottomY + bottomArea / 2 - lh / 2, lw, lh)
+  }
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 11：Vintage 复古纸相框 —— 牛皮纸底 + 做旧边 + 手写签名
+// ═══════════════════════════════════════════════════════
+function renderVintage({ image, config, exif }: RenderCtx): HTMLCanvasElement {
+  const W = image.width, H = image.height, long = Math.max(W, H)
+  const pad = Math.round(long * config.padding / 100)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W + pad * 2
+  canvas.height = H + pad * 2 + Math.round(long * 0.06)
+  const c = canvas.getContext('2d')!
+
+  // 牛皮纸底（带渐变 + 纹理）
+  c.fillStyle = config.bgColor
+  c.fillRect(0, 0, canvas.width, canvas.height)
+
+  // 纹理噪点（用随机像素点模拟）
+  c.save()
+  c.globalAlpha = 0.08
+  const grainSize = 3
+  for (let y = 0; y < canvas.height; y += grainSize * 3) {
+    for (let x = 0; x < canvas.width; x += grainSize * 3) {
+      if (Math.random() > 0.6) {
+        c.fillStyle = Math.random() > 0.5 ? '#000' : '#fff'
+        c.fillRect(x, y, grainSize, grainSize)
+      }
+    }
+  }
+  c.restore()
+
+  // 做旧边（内侧细线）
+  c.strokeStyle = 'rgba(74,55,40,0.3)'
+  c.lineWidth = 1
+  c.strokeRect(pad * 0.3, pad * 0.3, canvas.width - pad * 0.6, canvas.height - pad * 0.6)
+
+  // 图像区域带微阴影
+  c.save()
+  c.shadowColor = 'rgba(0,0,0,0.25)'
+  c.shadowBlur = pad * 0.4
+  c.shadowOffsetY = pad * 0.1
+  c.fillStyle = '#000'
+  c.fillRect(pad, pad, W, H)
+  c.restore()
+
+  // 图像去色 + 复古色调（sepia 滤镜）
+  c.save()
+  c.drawImage(image, pad, pad, W, H)
+  c.globalCompositeOperation = 'multiply'
+  c.fillStyle = 'rgba(220,190,150,0.2)'
+  c.fillRect(pad, pad, W, H)
+  c.restore()
+
+  // 底部签名
+  const fontPx = Math.round(long * config.fontSize / 100)
+  c.fillStyle = config.textColor
+  c.font = `italic 500 ${fontPx}px "Snell Roundhand", "Zapfino", "STXingkai", cursive`
+  c.textAlign = 'left'
+  c.textBaseline = 'middle'
+  const sig = config.customText || 'Vintage'
+  c.fillText(sig, pad * 1.3, pad + H + Math.round(long * 0.03))
+
+  // 右下日期
+  c.textAlign = 'right'
+  c.font = `300 ${Math.round(fontPx * 0.8)}px "Helvetica Neue", sans-serif`
+  if (exif.dateTaken) c.fillText(exif.dateTaken, canvas.width - pad * 1.3, pad + H + Math.round(long * 0.03))
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 12：Magazine 杂志封面 —— 顶部大标题 + 底部 caption + 细线分隔
+// ═══════════════════════════════════════════════════════
+function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
+  const W = image.width, H = image.height, long = Math.max(W, H)
+  const topBar = Math.round(long * 0.08)
+  const bottomBar = Math.round(long * 0.1)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H + topBar + bottomBar
+  const c = canvas.getContext('2d')!
+
+  c.fillStyle = config.bgColor
+  c.fillRect(0, 0, canvas.width, canvas.height)
+
+  // 图片居中
+  c.drawImage(image, 0, topBar, W, H)
+
+  const fontPx = Math.round(long * config.fontSize / 100)
+  const padX = Math.round(W * 0.04)
+
+  // ── 顶部：杂志标题 + 期号 ──
+  c.textBaseline = 'middle'
+  c.fillStyle = config.textColor
+  c.font = `800 ${Math.round(fontPx * 1.8)}px "Helvetica Neue", "PingFang SC", sans-serif`
+  c.textAlign = 'left'
+  c.fillText('PHOTO', padX, topBar / 2 - fontPx * 0.25)
+  c.font = `300 ${Math.round(fontPx * 1.8)}px "Helvetica Neue", sans-serif`
+  c.fillText('ZINE', padX + c.measureText('PHOTO').width + fontPx * 0.4, topBar / 2 - fontPx * 0.25)
+
+  // 右上：期号 + 日期
+  c.textAlign = 'right'
+  c.font = `400 ${Math.round(fontPx * 0.7)}px "SF Mono", monospace`
+  c.fillStyle = 'rgba(0,0,0,0.6)'
+  const issue = `ISSUE ${exif.dateTaken?.replace(/\D/g, '').slice(-4) || '001'} · ${exif.dateTaken || ''}`
+  c.fillText(issue, W - padX, topBar / 2 - fontPx * 0.25)
+
+  // 顶部分隔线
+  c.strokeStyle = 'rgba(0,0,0,0.15)'
+  c.lineWidth = 1
+  c.beginPath()
+  c.moveTo(padX, topBar - 1)
+  c.lineTo(W - padX, topBar - 1)
+  c.stroke()
+
+  // ── 底部 caption ──
+  const bottomY = topBar + H
+  // 分隔线
+  c.beginPath()
+  c.moveTo(padX, bottomY + 1)
+  c.lineTo(W - padX, bottomY + 1)
+  c.stroke()
+
+  c.textAlign = 'left'
+  c.fillStyle = config.textColor
+  c.font = `500 ${Math.round(fontPx * 0.9)}px "Helvetica Neue", sans-serif`
+  const title = config.customText || exif.model || 'Untitled'
+  c.fillText(title.toUpperCase(), padX, bottomY + bottomBar * 0.4)
+
+  c.fillStyle = 'rgba(0,0,0,0.55)'
+  c.font = `300 ${Math.round(fontPx * 0.7)}px "Helvetica Neue", sans-serif`
+  const desc = formatExifLine(exif) || (exif.lens ?? '')
+  if (desc) c.fillText(desc, padX, bottomY + bottomBar * 0.7)
+
+  // 右下：页码
+  c.textAlign = 'right'
+  c.font = `400 ${Math.round(fontPx * 0.7)}px "SF Mono", monospace`
+  c.fillStyle = 'rgba(0,0,0,0.5)'
+  c.fillText('— 01 / 01 —', W - padX, bottomY + bottomBar * 0.55)
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 13：Location 地理水印 —— 底部栏：Logo + 型号 + 📍地点 + 日期
+// ═══════════════════════════════════════════════════════
+function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement {
+  const W = image.width, H = image.height, long = Math.max(W, H)
+  const barH = Math.round(long * 0.10)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H + barH
+  const c = canvas.getContext('2d')!
+
+  c.drawImage(image, 0, 0, W, H)
+
+  c.fillStyle = config.bgColor
+  c.fillRect(0, H, W, barH)
+
+  const padX = Math.round(W * 0.035)
+  const centerY = H + barH / 2
+  const fontPx = Math.round(long * config.fontSize / 100)
+
+  // ── 左侧：Logo + 型号 ──
+  let leftX = padX
+  if (config.showLogo && logo) {
+    const lh = Math.round(long * config.logoSize / 100)
+    const lw = lh * (logo.width / logo.height)
+    c.drawImage(logo, leftX, centerY - lh / 2, lw, lh)
+    leftX += lw + padX * 0.6
+  }
+
+  c.textBaseline = 'middle'
+  c.textAlign = 'left'
+  c.fillStyle = config.textColor
+  c.font = `600 ${Math.round(fontPx * 1.1)}px -apple-system, sans-serif`
+  c.fillText(exif.model || '—', leftX, centerY - fontPx * 0.45)
+  c.fillStyle = 'rgba(255,255,255,0.55)'
+  c.font = `400 ${Math.round(fontPx * 0.75)}px -apple-system, sans-serif`
+  const lens = exif.lens || formatExifLine(exif) || ''
+  if (lens) c.fillText(lens, leftX, centerY + fontPx * 0.55)
+
+  // ── 右侧：地点 + 日期 ──
+  c.textAlign = 'right'
+  const locationName = config.locationName || config.customText || ''
+  c.fillStyle = config.textColor
+  c.font = `500 ${Math.round(fontPx * 1.0)}px -apple-system, "PingFang SC", sans-serif`
+  if (locationName) {
+    c.fillText(`📍 ${locationName}`, W - padX, centerY - fontPx * 0.45)
+  }
+  c.fillStyle = 'rgba(255,255,255,0.55)'
+  c.font = `300 ${Math.round(fontPx * 0.75)}px "SF Mono", monospace`
+  if (exif.dateTaken) {
+    c.fillText(exif.dateTaken, W - padX, centerY + fontPx * 0.55)
+  }
 
   return canvas
 }
