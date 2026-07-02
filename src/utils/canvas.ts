@@ -287,12 +287,19 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
   c.fillStyle = config.bgColor
   c.fillRect(0, H, W, barH)
 
+  // 检测竖版照片（手机照片典型特征：W < H）
+  const isPortrait = H > W
+  // 宽高比 < 0.75 的超窄图（如全景截图）也用紧凑模式
+  const isNarrow = W / H < 0.75
+
   const padX = Math.round(W * 0.04)
   const centerY = H + barH / 2
-  const fontPx = Math.round(long * config.fontSize / 100)
+  // 竖版/窄图缩小字体系数，避免拥挤
+  const fontScale = isPortrait || isNarrow ? 0.75 : 1
+  const fontPx = Math.round(long * config.fontSize / 100 * fontScale)
   const hasLogo = config.showLogo && logo
 
-  // ── 1. 预计算右侧参数块尺寸 ──
+  // ── 1. 预计算右侧参数块尺寸（无数据则不加入，不显示占位）──
   const rightBlocks: Array<{ label: string; value: string }> = []
   if (exif.focalLength) rightBlocks.push({ label: '焦距', value: `${Math.round(exif.focalLength)}mm` })
   if (exif.fNumber) rightBlocks.push({ label: '光圈', value: `f/${exif.fNumber}` })
@@ -304,12 +311,18 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
   const blockWidths: number[] = []
   let rightContentW = 0
 
+  // 竖版模式：不显示 label，只计算 value 宽度
+  const showLabels = !(isPortrait || isNarrow)
+
   for (const b of rightBlocks) {
     c.font = `500 ${blockFontValue}px ${FONT_MONO}`
     const vw = c.measureText(b.value).width
-    c.font = `400 ${blockFontLabel}px ${FONT_UI}`
-    const lw = c.measureText(b.label).width
-    const bw = Math.max(vw, lw)
+    const bw = showLabels
+      ? (() => {
+          c.font = `400 ${blockFontLabel}px ${FONT_UI}`
+          return Math.max(vw, c.measureText(b.label).width)
+        })()
+      : vw
     blockWidths.push(bw)
     rightContentW += bw
   }
@@ -324,79 +337,103 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
   }
   const rightAreaW = rightContentW + Math.max(0, rightBlocks.length - 1) * gap
 
-  // ── 2. 左侧：Logo + 型号 / 无 Logo 居中 ──
-  const modelText = exif.model || '—'
+  // ── 2. 左侧：Logo + 型号（无型号则不渲染，避免显示 "—"）──
+  const modelText = exif.model || ''
   const lensText = exif.lens || config.customText || ''
 
-  if (hasLogo) {
-    let leftX = padX
-    const lh = Math.round(long * config.logoSize / 100)
-    const lw = lh * (logo!.width / logo!.height)
-    c.drawImage(logo!, leftX, centerY - lh / 2, lw, lh)
-    leftX += lw + padX * 0.6
+  // 如果没有任何文字可显示（无型号 + 无镜头 + 无参数），整个 bar 留空
+  const hasLeftContent = modelText || lensText
+  const hasAnyContent = hasLeftContent || rightBlocks.length > 0
 
-    c.fillStyle = config.textColor
-    c.textBaseline = 'middle'
-    c.textAlign = 'left'
-    c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
-    c.fillText(modelText, leftX, centerY - fontPx * 0.5)
-    c.fillStyle = withAlpha(config.textColor, 0.55)
-    c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
-    if (lensText) c.fillText(lensText, leftX, centerY + fontPx * 0.7)
-  } else {
-    c.fillStyle = config.textColor
-    c.textBaseline = 'middle'
+  if (hasAnyContent) {
+    if (hasLogo && hasLeftContent) {
+      let leftX = padX
+      // 竖版模式 Logo 也相应缩小
+      const logoScale = isPortrait || isNarrow ? 0.7 : 1
+      const lh = Math.round(long * config.logoSize / 100 * logoScale)
+      const lw = lh * (logo!.width / logo!.height)
+      c.drawImage(logo!, leftX, centerY - lh / 2, lw, lh)
+      leftX += lw + padX * 0.6
 
-    if (rightBlocks.length === 0) {
-      c.textAlign = 'center'
-      c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
-      c.fillText(modelText, W / 2, centerY - fontPx * 0.5)
-      c.fillStyle = withAlpha(config.textColor, 0.55)
-      c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
-      if (lensText) c.fillText(lensText, W / 2, centerY + fontPx * 0.7)
-    } else {
-      const leftEnd = W - padX - rightAreaW - padX
-      const leftCenterX = leftEnd > padX
-        ? (padX + leftEnd) / 2
-        : padX
-      const align = leftEnd > padX ? 'center' as const : 'left' as const
-
-      c.textAlign = align
-      c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
-      c.fillText(modelText, leftCenterX, centerY - fontPx * 0.5)
-      c.fillStyle = withAlpha(config.textColor, 0.55)
-      c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
-      if (lensText) c.fillText(lensText, leftCenterX, centerY + fontPx * 0.7)
-    }
-  }
-
-  // ── 3. 右侧参数块 ──
-  if (rightBlocks.length) {
-    let rightX = W - padX
-    const blockEdges: number[] = []
-
-    for (let i = rightBlocks.length - 1; i >= 0; i--) {
-      const b = rightBlocks[i]
-      c.textAlign = 'right'
+      if (modelText) {
+        c.fillStyle = config.textColor
+        c.textBaseline = 'middle'
+        c.textAlign = 'left'
+        c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
+        c.fillText(modelText, leftX, centerY - fontPx * 0.5)
+      }
+      if (lensText) {
+        c.fillStyle = withAlpha(config.textColor, 0.55)
+        c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
+        c.fillText(lensText, leftX, modelText ? centerY + fontPx * 0.7 : centerY)
+      }
+    } else if (hasLeftContent) {
+      // 无 Logo 但有文字
       c.fillStyle = config.textColor
-      c.font = `500 ${blockFontValue}px ${FONT_MONO}`
-      c.fillText(b.value, rightX, centerY - blockFontLabel * 0.5)
-      c.fillStyle = withAlpha(config.textColor, 0.55)
-      c.font = `400 ${blockFontLabel}px ${FONT_UI}`
-      c.fillText(b.label, rightX, centerY + blockFontValue * 0.6)
-      rightX -= blockWidths[i]
-      blockEdges.push(rightX)
-      rightX -= gap
+      c.textBaseline = 'middle'
+
+      if (rightBlocks.length === 0) {
+        c.textAlign = 'center'
+        if (modelText) {
+          c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
+          c.fillText(modelText, W / 2, centerY - (lensText ? fontPx * 0.5 : 0))
+        }
+        if (lensText) {
+          c.fillStyle = withAlpha(config.textColor, 0.55)
+          c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
+          c.fillText(lensText, W / 2, modelText ? centerY + fontPx * 0.7 : centerY)
+        }
+      } else {
+        const leftEnd = W - padX - rightAreaW - padX
+        const leftCenterX = leftEnd > padX
+          ? (padX + leftEnd) / 2
+          : padX
+        const align = leftEnd > padX ? 'center' as const : 'left' as const
+
+        c.textAlign = align
+        if (modelText) {
+          c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
+          c.fillText(modelText, leftCenterX, centerY - (lensText ? fontPx * 0.5 : 0))
+        }
+        if (lensText) {
+          c.fillStyle = withAlpha(config.textColor, 0.55)
+          c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_UI}`
+          c.fillText(lensText, leftCenterX, modelText ? centerY + fontPx * 0.7 : centerY)
+        }
+      }
     }
 
-    c.fillStyle = withAlpha(config.textColor, 0.35)
-    const dotR = Math.max(1.5, Math.round(fontPx * 0.08))
-    for (let i = 0; i < blockEdges.length - 1; i++) {
-      const edgeX = blockEdges[i]
-      const dotX = edgeX + gap / 2
-      c.beginPath()
-      c.arc(dotX, centerY, dotR, 0, Math.PI * 2)
-      c.fill()
+    // ── 3. 右侧参数块（竖版只显示 value，不显示 label）──
+    if (rightBlocks.length) {
+      let rightX = W - padX
+      const blockEdges: number[] = []
+
+      for (let i = rightBlocks.length - 1; i >= 0; i--) {
+        const b = rightBlocks[i]
+        c.textAlign = 'right'
+        c.fillStyle = config.textColor
+        c.font = `500 ${blockFontValue}px ${FONT_MONO}`
+        // 竖版：单行居中在 barY；横版：两行（value + label）
+        c.fillText(b.value, rightX, showLabels ? centerY - blockFontLabel * 0.5 : centerY)
+        if (showLabels) {
+          c.fillStyle = withAlpha(config.textColor, 0.55)
+          c.font = `400 ${blockFontLabel}px ${FONT_UI}`
+          c.fillText(b.label, rightX, centerY + blockFontValue * 0.6)
+        }
+        rightX -= blockWidths[i]
+        blockEdges.push(rightX)
+        rightX -= gap
+      }
+
+      c.fillStyle = withAlpha(config.textColor, 0.35)
+      const dotR = Math.max(1.5, Math.round(fontPx * 0.08))
+      for (let i = 0; i < blockEdges.length - 1; i++) {
+        const edgeX = blockEdges[i]
+        const dotX = edgeX + gap / 2
+        c.beginPath()
+        c.arc(dotX, centerY, dotR, 0, Math.PI * 2)
+        c.fill()
+      }
     }
   }
 
