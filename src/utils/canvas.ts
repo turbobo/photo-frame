@@ -163,7 +163,7 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
   // 底部文字
   const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `500 ${fontPx}px ${FONT_UI}`
+  c.font = `400 ${fontPx}px ${FONT_UI}`
   c.textBaseline = 'middle'
 
   const centerY = cardY + pad + H + bottomExtra / 2
@@ -210,7 +210,7 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   // 底部签名文字
   const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `italic 500 ${fontPx}px ${FONT_HAND}`
+  c.font = `italic 400 ${fontPx}px ${FONT_HAND}`
   c.textAlign = 'center'
   c.textBaseline = 'middle'
   const line = config.customText || exif.dateTaken || ''
@@ -347,7 +347,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
     }
 
     // 测量总宽度以判断是否需要缩小
-    c.font = `500 ${fontPx}px ${FONT_DISPLAY}`
+    c.font = `400 ${fontPx}px ${FONT_DISPLAY}`
     const modelW = modelPart ? c.measureText(modelPart).width : 0
     c.font = `400 ${fontPx * 0.9}px ${FONT_MONO}`
     const restW = textStr ? c.measureText(textStr).width : 0
@@ -371,7 +371,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
     const modelFontPx = finalFontPx
     const restFontPx = Math.round(finalFontPx * 0.9)
 
-    c.font = `500 ${modelFontPx}px ${FONT_DISPLAY}`
+    c.font = `400 ${modelFontPx}px ${FONT_DISPLAY}`
     const mW = modelPart ? c.measureText(modelPart).width : 0
     c.font = `400 ${restFontPx}px ${FONT_MONO}`
     const rW = textStr ? c.measureText(textStr).width : 0
@@ -395,7 +395,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
     if (modelPart) {
       c.fillStyle = config.textColor
       c.textAlign = 'left'
-      c.font = `500 ${modelFontPx}px ${FONT_DISPLAY}`
+      c.font = `400 ${modelFontPx}px ${FONT_DISPLAY}`
       c.fillText(modelPart, curX, centerY)
       curX += mW
     }
@@ -440,7 +440,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
   const showLabels = !(isPortrait || isNarrow)
 
   for (const b of rightBlocks) {
-    c.font = `500 ${blockFontValue}px ${FONT_MONO}`
+    c.font = `400 ${blockFontValue}px ${FONT_MONO}`
     const vw = c.measureText(b.value).width
     const bw = showLabels
       ? (() => {
@@ -480,7 +480,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
         c.fillStyle = config.textColor
         c.textBaseline = 'middle'
         c.textAlign = 'left'
-        c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
+        c.font = `400 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
         c.fillText(modelText, leftX, centerY - fontPx * 0.5)
       }
       if (lensText) {
@@ -496,7 +496,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
       if (rightBlocks.length === 0) {
         c.textAlign = 'center'
         if (modelText) {
-          c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
+          c.font = `400 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
           c.fillText(modelText, W / 2, centerY - (lensText ? fontPx * 0.5 : 0))
         }
         if (lensText) {
@@ -513,7 +513,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
 
         c.textAlign = align
         if (modelText) {
-          c.font = `500 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
+          c.font = `400 ${Math.round(fontPx * 1.25)}px ${FONT_DISPLAY}`
           c.fillText(modelText, leftCenterX, centerY - (lensText ? fontPx * 0.5 : 0))
         }
         if (lensText) {
@@ -533,7 +533,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
         const b = rightBlocks[i]
         c.textAlign = 'right'
         c.fillStyle = config.textColor
-        c.font = `500 ${blockFontValue}px ${FONT_MONO}`
+        c.font = `400 ${blockFontValue}px ${FONT_MONO}`
         // 竖版：单行居中在 barY；横版：两行（value + label）
         c.fillText(b.value, rightX, showLabels ? centerY - blockFontLabel * 0.5 : centerY)
         if (showLabels) {
@@ -621,7 +621,7 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   c.fillStyle = config.textColor
   c.textAlign = hasLogo ? 'left' : 'center'
   const textX = hasLogo ? leftX : canvas.width / 2
-  c.font = `500 ${titleFont}px ${FONT_DISPLAY}`
+  c.font = `400 ${titleFont}px ${FONT_DISPLAY}`
   const title = config.customText || exif.model || ''
   if (title) c.fillText(title, textX, topY)
 
@@ -666,7 +666,7 @@ function renderLeica({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
 
   // 红点旁的 LEICA 字样
   c.fillStyle = config.textColor
-  c.font = `500 ${Math.round(fontPx * 0.95)}px ${FONT_DISPLAY}`
+  c.font = `400 ${Math.round(fontPx * 0.95)}px ${FONT_DISPLAY}`
   c.textAlign = 'left'
   c.textBaseline = 'middle'
   c.fillText('Leica', padX + dotR * 2.8, centerY - fontPx * 0.5)
@@ -725,7 +725,7 @@ function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   c.fillStyle = config.textColor
   c.textAlign = 'left'
   c.textBaseline = 'middle'
-  c.font = `500 ${fontPx}px ${FONT_DISPLAY}`
+  c.font = `400 ${fontPx}px ${FONT_DISPLAY}`
   c.fillText(modelText, blockX + dotR * 3.5, blockY + blockH / 2 - fontPx * 0.55)
   c.font = `300 ${Math.round(fontPx * 0.8)}px ${FONT_MONO}`
   c.fillStyle = 'rgba(255,255,255,0.85)'
@@ -775,7 +775,7 @@ function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   // 侧边竖排文字（胶片编号 + 品牌）
   const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `500 ${fontPx}px ${FONT_MONO}`
+  c.font = `400 ${fontPx}px ${FONT_MONO}`
   c.textBaseline = 'middle'
   c.textAlign = 'center'
 
@@ -798,7 +798,7 @@ function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   // 右下角日期印字（橙色，仿旧式相机日期背印）
   if (exif.dateTaken) {
     const dateFont = Math.round(fontPx * 1.1)
-    c.font = `700 ${dateFont}px ${FONT_MONO}`
+    c.font = `400 ${dateFont}px ${FONT_MONO}`
     c.fillStyle = config.textColor
     c.textAlign = 'right'
     c.textBaseline = 'bottom'
@@ -852,7 +852,7 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   // 底部手写签名
   const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `italic 500 ${fontPx}px ${FONT_HAND}`
+  c.font = `italic 400 ${fontPx}px ${FONT_HAND}`
   c.textAlign = 'left'
   c.textBaseline = 'middle'
   const signature = config.customText || ''
@@ -927,7 +927,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
     // 有 logo：左对齐标题/描述，右侧放 logo
     c.textAlign = 'left'
     c.fillStyle = config.textColor
-    c.font = `500 ${Math.round(fontPx * 1.2)}px ${FONT_DISPLAY}`
+    c.font = `400 ${Math.round(fontPx * 1.2)}px ${FONT_DISPLAY}`
     const title = config.customText || exif.model || '无标题'
     c.fillText(title, cardX + pad * 1.2, bottomY + bottomArea * 0.38)
 
@@ -943,7 +943,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
     // 无 logo：居中显示标题 + 描述
     c.textAlign = 'center'
     c.fillStyle = config.textColor
-    c.font = `500 ${Math.round(fontPx * 1.2)}px ${FONT_DISPLAY}`
+    c.font = `400 ${Math.round(fontPx * 1.2)}px ${FONT_DISPLAY}`
     const title = config.customText || exif.model || '无标题'
     const titleY = hasDesc ? bottomY + bottomArea * 0.38 : bottomY + bottomArea * 0.5
     c.fillText(title, cardX + cardW / 2, titleY)
@@ -1013,7 +1013,7 @@ function renderVintage({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   // 底部签名
   const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `italic 500 ${fontPx}px ${FONT_HAND}`
+  c.font = `italic 400 ${fontPx}px ${FONT_HAND}`
   c.textAlign = 'left'
   c.textBaseline = 'middle'
   const sig = config.customText || 'Vintage'
@@ -1054,7 +1054,7 @@ function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   c.textBaseline = 'middle'
   c.textAlign = 'left'
   c.fillStyle = config.textColor
-  c.font = `600 ${Math.round(fontPx * 1.8)}px ${FONT_DISPLAY}`
+  c.font = `400 ${Math.round(fontPx * 1.8)}px ${FONT_DISPLAY}`
   c.fillText('PHOTO', padX, topBar / 2 - fontPx * 0.25)
   const photoW = c.measureText('PHOTO').width
   c.font = `300 ${Math.round(fontPx * 1.8)}px ${FONT_DISPLAY}`
@@ -1085,7 +1085,7 @@ function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 
   c.textAlign = 'left'
   c.fillStyle = config.textColor
-  c.font = `500 ${Math.round(fontPx * 0.95)}px ${FONT_DISPLAY}`
+  c.font = `400 ${Math.round(fontPx * 0.95)}px ${FONT_DISPLAY}`
   const title = config.customText || exif.model || 'Untitled'
   c.fillText(title, padX, bottomY + bottomBar * 0.4)
 
@@ -1144,7 +1144,7 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
   // 预计算右侧宽度以确定左侧可用区域
   let rightAreaW = 0
   if (hasRight) {
-    c.font = `500 ${Math.round(fontPx * 1.0)}px ${FONT_DISPLAY}`
+    c.font = `400 ${Math.round(fontPx * 1.0)}px ${FONT_DISPLAY}`
     if (locationName) rightAreaW = Math.max(rightAreaW, c.measureText(`📍 ${locationName}`).width)
     c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_MONO}`
     if (exif.dateTaken) rightAreaW = Math.max(rightAreaW, c.measureText(exif.dateTaken).width)
@@ -1154,7 +1154,7 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
   if (hasLogo) {
     c.textAlign = 'left'
     c.fillStyle = config.textColor
-    c.font = `500 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
+    c.font = `400 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
     c.fillText(exif.model || '—', leftX, centerY - fontPx * 0.45)
     c.fillStyle = withAlpha(config.textColor, 0.55)
     c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_UI}`
@@ -1164,7 +1164,7 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
     // 无 logo 无右侧：全宽居中
     c.textAlign = 'center'
     c.fillStyle = config.textColor
-    c.font = `500 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
+    c.font = `400 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
     c.fillText(exif.model || '—', W / 2, centerY - fontPx * 0.45)
     c.fillStyle = withAlpha(config.textColor, 0.55)
     c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_UI}`
@@ -1178,7 +1178,7 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
 
     c.textAlign = align
     c.fillStyle = config.textColor
-    c.font = `500 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
+    c.font = `400 ${Math.round(fontPx * 1.15)}px ${FONT_DISPLAY}`
     c.fillText(exif.model || '—', leftCenterX, centerY - fontPx * 0.45)
     c.fillStyle = withAlpha(config.textColor, 0.55)
     c.font = `400 ${Math.round(fontPx * 0.75)}px ${FONT_UI}`
@@ -1189,7 +1189,7 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
   // ── 右侧：地点 + 日期 ──
   c.textAlign = 'right'
   c.fillStyle = config.textColor
-  c.font = `500 ${Math.round(fontPx * 1.0)}px ${FONT_DISPLAY}`
+  c.font = `400 ${Math.round(fontPx * 1.0)}px ${FONT_DISPLAY}`
   if (locationName) {
     c.fillText(`📍 ${locationName}`, W - padX, centerY - fontPx * 0.45)
   }
