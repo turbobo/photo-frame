@@ -331,10 +331,15 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
   if (exif.iso) rightBlocks.push({ label: 'ISO', value: `${exif.iso}` })
 
   if (rightBlocks.length) {
-    const gap = Math.round(padX * 0.9)
+    // 加大块间距（padX × 2.5），让每组参数更易分辨
+    const gap = Math.round(padX * 2.5)
     const blockFontValue = Math.round(fontPx * 1.2)
     const blockFontLabel = Math.round(fontPx * 0.7)
     let rightX = W - padX
+
+    // 记录每个块的右边界，用于后续画分隔点（跳过最右边一个）
+    const blockEdges: number[] = []
+
     for (let i = rightBlocks.length - 1; i >= 0; i--) {
       const b = rightBlocks[i]
       c.textAlign = 'right'
@@ -345,7 +350,20 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
       c.font = `400 ${blockFontLabel}px ${FONT_UI}`
       c.fillText(b.label, rightX, centerY + blockFontValue * 0.6)
       const blockW = Math.max(c.measureText(b.value).width, c.measureText(b.label).width)
-      rightX -= blockW + gap
+      rightX -= blockW
+      blockEdges.push(rightX)   // 块左边 x
+      rightX -= gap
+    }
+
+    // 块间分隔点（居中在 gap 中，最右 gap 不画）
+    c.fillStyle = 'rgba(255,255,255,0.35)'
+    const dotR = Math.max(1.5, Math.round(fontPx * 0.08))
+    for (let i = 0; i < blockEdges.length - 1; i++) {
+      const edgeX = blockEdges[i]
+      const dotX = edgeX + gap / 2
+      c.beginPath()
+      c.arc(dotX, centerY, dotR, 0, Math.PI * 2)
+      c.fill()
     }
   }
 
