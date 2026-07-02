@@ -1,7 +1,8 @@
-// 14 种边框模板 —— 元数据 + 默认配置
+// 18 种边框模板 —— 元数据 + 默认配置
 // 5 个原有：minimal / polaroid / film / exif / insta
 // 8 个新增：leica / red-dot / dazz / instax / xhs / vintage / magazine / location
 // 1 个参考：light-shadow（参考「光影边框」App 风格）
+// 4 个参考 Copicseal：frameless-rounded / white-border / ps-splash / lr-splash
 import type { TemplateConfig, TemplateId } from '../types'
 
 export interface TemplateMeta {
@@ -14,13 +15,17 @@ export interface TemplateMeta {
 
 export const TEMPLATES: TemplateMeta[] = [
   // ── 基础 ──
-  { id: 'minimal',      group: 'basic',  name: '极简',      desc: '白/黑边 + 底部小字',             icon: '▫️' },
-  { id: 'polaroid',     group: 'basic',  name: '拍立得',    desc: '经典上下等宽白边',               icon: '🖼️' },
-  { id: 'light-shadow', group: 'basic',  name: '光影',      desc: '底部纯黑薄条 + 单行 EXIF',       icon: '🌓' },
+  { id: 'minimal',           group: 'basic',  name: '极简',        desc: '白/黑边 + 底部小字',             icon: '▫️' },
+  { id: 'polaroid',          group: 'basic',  name: '拍立得',      desc: '经典上下等宽白边',               icon: '🖼️' },
+  { id: 'light-shadow',      group: 'basic',  name: '光影',        desc: '底部纯黑薄条 + 单行 EXIF',       icon: '🌓' },
+  { id: 'frameless-rounded', group: 'basic',  name: '无框圆角',    desc: '圆角图片 + 悬浮阴影 + 居中 EXIF', icon: '🔘' },
+  { id: 'white-border',      group: 'basic',  name: '白色边框',    desc: '经典相框 + 左右两栏 EXIF',       icon: '⬜' },
   // ── 品牌风 ──
   { id: 'leica',     group: 'brand',  name: '徕卡栏',    desc: '底部黑栏 + 红点 + 型号',         icon: '🔴' },
   { id: 'red-dot',   group: 'brand',  name: '红点水印',  desc: '右下角悬浮红点 + 参数',          icon: '⚪' },
   { id: 'exif',      group: 'brand',  name: '参数栏',    desc: 'Logo + 光圈快门 ISO',             icon: '📷' },
+  { id: 'ps-splash', group: 'brand',  name: 'PS 启动窗', desc: '模拟 Photoshop 启动加载界面',     icon: '🎨' },
+  { id: 'lr-splash', group: 'brand',  name: 'LR 启动窗', desc: '模拟 Lightroom 启动加载界面',     icon: '📸' },
   // ── 胶片 ──
   { id: 'film',      group: 'film',   name: '胶片',      desc: '黑框齿孔 + 编号',                icon: '🎞️' },
   { id: 'dazz',      group: 'film',   name: 'Dazz 胶卷', desc: '135 胶卷边框 + 日期印字',        icon: '📼' },
@@ -93,5 +98,60 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
       return { ...base, padding: 0, bgColor: '#ffffff', textColor: '#111', fontSize: 2.5, showLogo: false }
     case 'location':
       return { ...base, padding: 0, bgColor: '#111111', textColor: '#ffffff', fontSize: 1.6, logoSize: 4 }
+    case 'frameless-rounded':
+      return {
+        ...base,
+        padding: 0,
+        bgColor: '#f5f5f4',       // 画布背景（与预览区背景同色系，凸显图片阴影）
+        textColor: '#1c1917',
+        fontSize: 1.6,
+        showLogo: true,
+        showExif: true,
+        shadow: false,
+        imageRadius: 16,          // 图片自身圆角 16px
+        imageShadow: true,        // 图片阴影
+      }
+    case 'white-border':
+      return {
+        ...base,
+        padding: 0,
+        bgColor: '#ffffff',       // 边框颜色
+        textColor: '#111111',
+        fontSize: 1.4,
+        showLogo: true,
+        showExif: true,
+        shadow: true,             // 相框外阴影
+        borderPadding: 4,         // 边框宽度 4% of long
+      }
+    case 'ps-splash':
+      return {
+        ...base,
+        padding: 0,
+        bgColor: '#ffffff',
+        textColor: '#1a1a1a',
+        fontSize: 1.2,
+        showLogo: true,
+        showExif: true,
+        shadow: true,
+        imageRadius: 8,
+        copyright: '© 2025 Photo Frame. All rights reserved.',
+        website: 'photoframe.app',
+        isAcrylic: false,
+      }
+    case 'lr-splash':
+      return {
+        ...base,
+        padding: 0,
+        bgColor: '#ffffff',
+        textColor: '#1a1a1a',
+        fontSize: 1.2,
+        showLogo: true,
+        showExif: true,
+        shadow: true,
+        imageRadius: 8,
+        copyright: '© 2025 Photo Frame. All rights reserved.',
+        website: 'photoframe.app',
+        isAcrylic: false,
+      }
   }
 }

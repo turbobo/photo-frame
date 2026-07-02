@@ -16,6 +16,7 @@ export type TemplateId =
   | 'minimal' | 'polaroid' | 'film' | 'exif' | 'insta'
   | 'leica' | 'red-dot' | 'dazz' | 'instax' | 'xhs' | 'vintage' | 'magazine' | 'location'
   | 'light-shadow'
+  | 'frameless-rounded' | 'white-border' | 'ps-splash' | 'lr-splash'
 
 export type FontFamily = 'noto-serif' | 'noto-sans' | 'inter' | 'jetbrains' | 'wenkai'
 
@@ -33,6 +34,13 @@ export interface TemplateConfig {
   shadow: boolean
   fontFamily?: FontFamily
   locationName?: string // 用于 location 模板的地点名
+  // 扩展字段（仅部分模板使用）
+  borderPadding?: number // 相框边距（白色边框模板），相对图片长边 %
+  imageRadius?: number   // 图片自身圆角（无框圆角 / PS/LR 启动窗）
+  imageShadow?: boolean  // 图片阴影（无框圆角）
+  copyright?: string     // 版权信息（PS/LR 启动窗）
+  website?: string       // 网站文本（PS/LR 启动窗）
+  isAcrylic?: boolean    // 亚克力毛玻璃效果（PS 启动窗）
 }
 
 export interface PhotoData {

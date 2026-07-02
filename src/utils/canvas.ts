@@ -1,7 +1,7 @@
 // Canvas 渲染核心 —— 13 种边框模板绘制
 import type { ExifData, TemplateConfig } from '../types'
 import {
-  FONT_UI, FONT_MONO, FONT_HAND,
+  FONT_UI, FONT_MONO, FONT_HAND, FONT_DISPLAY,
   WATERMARK, withAlpha, formatExifLine, getFontStack,
 } from './fonts'
 
@@ -43,6 +43,10 @@ export function renderFrame(ctx: RenderCtx): HTMLCanvasElement {
     case 'magazine': return renderMagazine(safeCtx)
     case 'location': return renderLocation(safeCtx)
     case 'light-shadow': return renderLightShadow(safeCtx)
+    case 'frameless-rounded': return renderFramelessRounded(safeCtx)
+    case 'white-border': return renderWhiteBorder(safeCtx)
+    case 'ps-splash': return renderPsSplash(safeCtx)
+    case 'lr-splash': return renderLrSplash(safeCtx)
     default:         return renderMinimal(safeCtx)
   }
 }
@@ -1287,4 +1291,397 @@ function renderLightShadow({ image, config, exif }: RenderCtx): HTMLCanvasElemen
   c.fillText(line, W / 2, H + barH / 2)
 
   return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 15：无框圆角（frameless-rounded）—— 参考 Copicseal tpl-default2
+// 透明感画布 + 圆角图片 + 悬浮阴影 + 居中 EXIF 信息
+// ═══════════════════════════════════════════════════════
+function renderFramelessRounded({ image, config, exif, logo }: RenderCtx): HTMLCanvasElement {
+  const W = image.width
+  const H = image.height
+  const long = Math.max(W, H)
+
+  // 边距：图片四周 + 底部 EXIF 区
+  const pad = Math.round(long * 0.04)
+  const infoGap = Math.round(long * 0.025) // 图片与 EXIF 间距
+  const infoH = Math.round(long * 0.12)    // EXIF 区高度
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W + pad * 2
+  canvas.height = H + pad * 2 + infoGap + infoH
+  const c = canvas.getContext('2d')!
+
+  // 画布背景
+  c.fillStyle = config.bgColor
+  c.fillRect(0, 0, canvas.width, canvas.height)
+
+  const radius = Math.min(config.imageRadius ?? 16, Math.min(W, H) / 2)
+
+  // 绘制带圆角 + 阴影的图片
+  c.save()
+  if (config.imageShadow) {
+    c.shadowColor = 'rgba(28, 25, 23, 0.22)'
+    c.shadowBlur = long * 0.03
+    c.shadowOffsetX = 0
+    c.shadowOffsetY = long * 0.012
+  }
+  // 1) 白色底板先渲染 → 阴影自然落到画布上
+  roundRect(c, pad, pad, W, H, radius)
+  c.fillStyle = '#ffffff'
+  c.fill()
+  c.restore()
+
+  // 2) 圆角裁剪后绘制图片
+  c.save()
+  roundRect(c, pad, pad, W, H, radius)
+  c.clip()
+  c.drawImage(image, pad, pad, W, H)
+  c.restore()
+
+  // EXIF 信息（居中，垂直排列）
+  const fontPx = Math.round(long * config.fontSize / 100)
+  const centerX = canvas.width / 2
+  let curY = pad + H + infoGap
+
+  // 行 1：品牌 Logo + 型号
+  if (config.showLogo || exif.model) {
+    let logoEndX = centerX
+    if (config.showLogo && logo && exif.model) {
+      // 测量型号文字宽度，反推 Logo 起始位置，使整体居中
+      c.font = `500 ${Math.round(fontPx * 1.1)}px ${FONT_DISPLAY}`
+      const modelW = c.measureText(exif.model).width
+      const logoH = Math.round(fontPx * 1.4)
+      const logoW = logoH * (logo.width / logo.height)
+      const gap = fontPx * 0.5
+      const totalW = logoW + gap + modelW
+      const startX = centerX - totalW / 2
+      c.drawImage(logo, startX, curY + (fontPx * 1.1 - logoH) / 2, logoW, logoH)
+      logoEndX = startX + logoW + gap
+      c.textAlign = 'left'
+      c.textBaseline = 'middle'
+      c.fillStyle = config.textColor
+      c.fillText(exif.model, logoEndX, curY + fontPx * 0.55)
+    } else if (exif.model) {
+      c.textAlign = 'center'
+      c.textBaseline = 'middle'
+      c.fillStyle = config.textColor
+      c.font = `500 ${Math.round(fontPx * 1.1)}px ${FONT_DISPLAY}`
+      c.fillText(exif.model, centerX, curY + fontPx * 0.55)
+    }
+    curY += fontPx * 1.8
+  }
+
+  // 行 2：拍摄参数（等宽字体）
+  const paramLine = [
+    exif.focalLength ? `${Math.round(exif.focalLength)}mm` : '',
+    exif.fNumber ? `f/${exif.fNumber}` : '',
+    exif.exposureTime ?? '',
+    exif.iso ? `ISO${exif.iso}` : '',
+  ].filter(Boolean).join('  ·  ')
+  if (paramLine) {
+    c.textAlign = 'center'
+    c.textBaseline = 'middle'
+    c.fillStyle = config.textColor
+    c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_MONO}`
+    c.fillText(paramLine, centerX, curY + fontPx * 0.45)
+    curY += fontPx * 1.4
+  }
+
+  // 行 3：日期（较小、次级颜色）
+  if (exif.dateTaken) {
+    c.textAlign = 'center'
+    c.textBaseline = 'middle'
+    c.fillStyle = withAlpha(config.textColor, 0.55)
+    c.font = `300 ${Math.round(fontPx * 0.75)}px ${FONT_UI}`
+    c.fillText(exif.dateTaken, centerX, curY + fontPx * 0.35)
+  }
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 16：白色边框（white-border）—— 参考 Copicseal tpl-default
+// 经典相框：四周等宽白边 + 底部两栏 EXIF + 外阴影
+// ═══════════════════════════════════════════════════════
+function renderWhiteBorder({ image, config, exif, logo }: RenderCtx): HTMLCanvasElement {
+  const W = image.width
+  const H = image.height
+  const long = Math.max(W, H)
+  const border = Math.round(long * (config.borderPadding ?? 4) / 100)
+  const bottomExtra = Math.round(long * 0.06) // 底部额外空间放 EXIF
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W + border * 2
+  canvas.height = H + border * 2 + bottomExtra
+  const c = canvas.getContext('2d')!
+
+  // 1) 外阴影：整个相框的悬浮感
+  if (config.shadow) {
+    c.save()
+    c.shadowColor = 'rgba(28, 25, 23, 0.18)'
+    c.shadowBlur = long * 0.025
+    c.shadowOffsetX = 0
+    c.shadowOffsetY = long * 0.01
+    c.fillStyle = config.bgColor
+    c.fillRect(0, 0, canvas.width, canvas.height)
+    c.restore()
+  } else {
+    c.fillStyle = config.bgColor
+    c.fillRect(0, 0, canvas.width, canvas.height)
+  }
+
+  // 2) 绘制原图
+  c.drawImage(image, border, border, W, H)
+
+  // 3) 底部 EXIF 区
+  const infoY = border + H + Math.round(border * 0.6)
+  const fontPx = Math.round(long * config.fontSize / 100)
+
+  // 左栏：Logo + 型号
+  let leftX = border
+  if (config.showLogo && logo) {
+    const logoH = Math.round(fontPx * 1.4)
+    const logoW = logoH * (logo.width / logo.height)
+    c.drawImage(logo, leftX, infoY + (fontPx * 1.2 - logoH) / 2, logoW, logoH)
+    leftX += logoW + fontPx * 0.6
+  }
+  if (exif.model) {
+    c.textAlign = 'left'
+    c.textBaseline = 'middle'
+    c.fillStyle = config.textColor
+    c.font = `500 ${Math.round(fontPx * 1.05)}px ${FONT_DISPLAY}`
+    c.fillText(exif.model, leftX, infoY + fontPx * 0.6)
+  }
+
+  // 右栏：参数 + 日期
+  const rightX = border + W
+  c.textAlign = 'right'
+  c.textBaseline = 'middle'
+  c.fillStyle = config.textColor
+  c.font = `400 ${Math.round(fontPx * 0.85)}px ${FONT_MONO}`
+  const paramLine = [
+    exif.focalLength ? `${Math.round(exif.focalLength)}mm` : '',
+    exif.fNumber ? `f/${exif.fNumber}` : '',
+    exif.exposureTime ?? '',
+    exif.iso ? `ISO${exif.iso}` : '',
+  ].filter(Boolean).join('  ')
+  if (paramLine) c.fillText(paramLine, rightX, infoY + fontPx * 0.45)
+  if (exif.dateTaken) {
+    c.fillStyle = withAlpha(config.textColor, 0.55)
+    c.font = `300 ${Math.round(fontPx * 0.7)}px ${FONT_UI}`
+    c.fillText(exif.dateTaken, rightX, infoY + fontPx * 1.35)
+  }
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 通用：PS / LR 启动窗渲染（参数化品牌色与 Logo 发光色）
+// 固定 10:10 正方形比例，左右分栏
+// ═══════════════════════════════════════════════════════
+function renderSplashScreen(
+  ctx: RenderCtx,
+  opts: {
+    accentColor: string    // 强调色（Logo 发光 / 标题色）
+    logoBoxBg: string      // Logo 方块背景
+    brandText: string      // 品牌文字（当无 Logo 时显示，如 "Ps" / "Lr"）
+    productName: string    // 产品名称（如 "Adobe Photoshop"）
+  }
+): HTMLCanvasElement {
+  const { image, config, exif, logo } = ctx
+  const W = image.width
+  const H = image.height
+  const long = Math.max(W, H)
+
+  // 画布：10:10 正方形，边长取图片长边 × 1.05
+  const side = Math.round(long * 1.05)
+  const outerPad = Math.round(side * 0.035)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = side
+  canvas.height = side
+  const c = canvas.getContext('2d')!
+
+  // 1) 整体背景
+  c.fillStyle = config.bgColor
+  c.fillRect(0, 0, side, side)
+
+  // 2) 亚克力噪点层（isAcrylic 模式）
+  if (config.isAcrylic) {
+    c.fillStyle = 'rgba(255, 255, 255, 0.08)'
+    c.fillRect(0, 0, side, side)
+    // 简易噪点：稀疏白点
+    const density = 0.003
+    c.fillStyle = 'rgba(0, 0, 0, 0.06)'
+    for (let y = 0; y < side; y += 4) {
+      for (let x = 0; x < side; x += 4) {
+        if (Math.random() < density) {
+          c.fillRect(x, y, 1, 1)
+        }
+      }
+    }
+  }
+
+  // 3) 左右面板划分
+  const contentW = side - outerPad * 2
+  const leftPanelW = Math.round(contentW * 0.55)
+  const rightPanelW = contentW - leftPanelW
+  const gap = Math.round(side * 0.02)
+  const leftX = outerPad
+  const rightX = outerPad + leftPanelW + gap
+
+  // 4) 右面板：图片（contain 模式 + 圆角 + 阴影）
+  const imgAreaY = outerPad
+  const imgAreaH = side - outerPad * 2
+  const imgAreaW = rightPanelW
+  const imgRadius = config.imageRadius ?? 8
+
+  // 计算 contain 缩放
+  const scale = Math.min(imgAreaW / W, imgAreaH / H)
+  const drawW = Math.round(W * scale)
+  const drawH = Math.round(H * scale)
+  const drawX = rightX + Math.round((imgAreaW - drawW) / 2)
+  const drawY = imgAreaY + Math.round((imgAreaH - drawH) / 2)
+
+  // 图片阴影 + 白色底 + 圆角裁剪
+  c.save()
+  if (config.shadow) {
+    c.shadowColor = 'rgba(28, 25, 23, 0.25)'
+    c.shadowBlur = side * 0.02
+    c.shadowOffsetX = 0
+    c.shadowOffsetY = side * 0.008
+  }
+  roundRect(c, drawX, drawY, drawW, drawH, imgRadius)
+  c.fillStyle = '#ffffff'
+  c.fill()
+  c.restore()
+
+  c.save()
+  roundRect(c, drawX, drawY, drawW, drawH, imgRadius)
+  c.clip()
+  c.drawImage(image, drawX, drawY, drawW, drawH)
+  c.restore()
+
+  // 5) 左面板：品牌 Logo 方块 + 型号 + 参数 + 版权 + 网站
+  const basePx = Math.max(12, Math.round(side * 0.018))
+  const logoBoxSize = Math.round(basePx * 5)
+  const logoBoxRadius = Math.round(basePx * 0.8)
+
+  // Logo 方块（深色背景 + 发光效果）
+  c.save()
+  if (config.shadow) {
+    c.shadowColor = opts.accentColor
+    c.shadowBlur = basePx * 1.2
+    c.shadowOffsetX = 0
+    c.shadowOffsetY = 0
+  }
+  roundRect(c, leftX, outerPad, logoBoxSize, logoBoxSize, logoBoxRadius)
+  c.fillStyle = opts.logoBoxBg
+  c.fill()
+  c.restore()
+
+  // Logo 方块内容：优先用品牌 logo，否则显示品牌文字（Ps/Lr）
+  if (config.showLogo && logo) {
+    const logoSize = Math.round(logoBoxSize * 0.6)
+    const logoDrawW = logoSize * (logo.width / logo.height)
+    c.save()
+    c.shadowColor = opts.accentColor
+    c.shadowBlur = basePx * 0.5
+    c.drawImage(
+      logo,
+      leftX + (logoBoxSize - logoDrawW) / 2,
+      outerPad + (logoBoxSize - logoSize) / 2,
+      logoDrawW,
+      logoSize
+    )
+    c.restore()
+  } else {
+    c.fillStyle = opts.accentColor
+    c.font = `700 ${Math.round(logoBoxSize * 0.45)}px ${FONT_UI}`
+    c.textAlign = 'center'
+    c.textBaseline = 'middle'
+    c.fillText(opts.brandText, leftX + logoBoxSize / 2, outerPad + logoBoxSize / 2)
+  }
+
+  // 型号（大字）
+  const modelY = outerPad + logoBoxSize + basePx * 1.8
+  c.fillStyle = config.textColor
+  c.font = `600 ${Math.round(basePx * 1.4)}px ${FONT_DISPLAY}`
+  c.textAlign = 'left'
+  c.textBaseline = 'top'
+  const modelText = exif.model || opts.productName
+  c.fillText(modelText, leftX, modelY)
+
+  // 分隔线
+  const dividerY = modelY + basePx * 2.2
+  c.strokeStyle = 'rgba(28, 25, 23, 0.08)'
+  c.lineWidth = 1
+  c.beginPath()
+  c.moveTo(leftX, dividerY)
+  c.lineTo(leftX + leftPanelW * 0.9, dividerY)
+  c.stroke()
+
+  // EXIF 详情列表
+  const detailStartY = dividerY + basePx * 1.2
+  const detailLineH = basePx * 1.5
+  const detailFontPx = Math.round(basePx * 0.85)
+
+  const details: Array<[string, string]> = []
+  if (exif.make || exif.model) details.push(['Camera', [exif.make, exif.model].filter(Boolean).join(' ')])
+  if (exif.focalLength) details.push(['Focal Length', `${Math.round(exif.focalLength)}mm`])
+  if (exif.fNumber) details.push(['Aperture', `f/${exif.fNumber}`])
+  if (exif.exposureTime) details.push(['Shutter', exif.exposureTime])
+  if (exif.iso) details.push(['ISO', `${exif.iso}`])
+  if (exif.dateTaken) details.push(['Date', exif.dateTaken])
+
+  details.forEach(([label, value], i) => {
+    const y = detailStartY + i * detailLineH
+    c.fillStyle = withAlpha(config.textColor, 0.55)
+    c.font = `400 ${detailFontPx}px ${FONT_UI}`
+    c.fillText(label, leftX, y)
+    c.fillStyle = config.textColor
+    c.font = `500 ${detailFontPx}px ${FONT_MONO}`
+    c.fillText(value, leftX + basePx * 8, y)
+  })
+
+  // 版权 + 网站（底部）
+  const footerY = side - outerPad - basePx * 2.8
+  c.fillStyle = withAlpha(config.textColor, 0.5)
+  c.font = `300 ${Math.round(basePx * 0.7)}px ${FONT_UI}`
+  const copyright = config.copyright ?? '© Photo Frame. All rights reserved.'
+  c.fillText(copyright, leftX, footerY)
+  const website = config.website ?? ''
+  if (website) {
+    c.fillStyle = opts.accentColor
+    c.fillText(website, leftX, footerY + basePx * 1.1)
+  }
+
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 17：PS 启动窗（ps-splash）—— 模拟 Photoshop 启动加载界面
+// Photoshop 品牌蓝 #31a8ff
+// ═══════════════════════════════════════════════════════
+function renderPsSplash(ctx: RenderCtx): HTMLCanvasElement {
+  return renderSplashScreen(ctx, {
+    accentColor: '#31a8ff',
+    logoBoxBg: '#001e36',
+    brandText: 'Ps',
+    productName: 'Adobe Photoshop',
+  })
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 18：LR 启动窗（lr-splash）—— 模拟 Lightroom 启动加载界面
+// Lightroom 品牌蓝 #0099ff
+// ═══════════════════════════════════════════════════════
+function renderLrSplash(ctx: RenderCtx): HTMLCanvasElement {
+  return renderSplashScreen(ctx, {
+    accentColor: '#0099ff',
+    logoBoxBg: '#1a2535',
+    brandText: 'Lr',
+    productName: 'Adobe Lightroom',
+  })
 }

@@ -281,6 +281,10 @@ function TemplateThumb({ id, selected }: { id: string; selected: boolean }) {
     minimal:      { name: '极简',     hint: '白/黑边 + 底部小字' },
     polaroid:     { name: '拍立得',   hint: '经典上下等宽白边' },
     'light-shadow': { name: '光影',   hint: '底部纯黑薄条 + 单行 EXIF' },
+    'frameless-rounded': { name: '无框圆角', hint: '圆角图片 + 悬浮阴影 + 居中 EXIF' },
+    'white-border': { name: '白色边框', hint: '经典相框 + 左右两栏 EXIF' },
+    'ps-splash': { name: 'PS 启动窗', hint: '模拟 Photoshop 启动界面' },
+    'lr-splash': { name: 'LR 启动窗', hint: '模拟 Lightroom 启动界面' },
     film:     { name: '胶片',     hint: '黑框齿孔 + 编号' },
     exif:     { name: '参数栏',   hint: 'Logo + 光圈快门 ISO' },
     insta:    { name: '社交卡片', hint: '毛玻璃 + 圆角 + 阴影' },
@@ -469,6 +473,60 @@ function TemplatePreview({ id }: { id: string }) {
               NIKON Z5  50mm F4 1/13s ISO250
             </div>
           </div>
+        </div>
+      )
+    case 'frameless-rounded':
+      return (
+        <div className="w-11 h-11 bg-[#f5f5f4] relative flex flex-col items-center justify-center p-1">
+          <div className="w-8 h-6 rounded-sm overflow-hidden shadow-md" style={{ background: photoGradient }}/>
+          <div className="mt-1 flex flex-col items-center gap-0.5">
+            <div className="text-[2.5px] text-text font-bold">NIKON Z5</div>
+            <div className="text-[2px] text-text-2 font-mono">50mm · f/4 · ISO250</div>
+          </div>
+        </div>
+      )
+    case 'white-border':
+      return (
+        <div className="w-11 h-11 bg-white shadow-md p-1 flex flex-col">
+          <div className="flex-1" style={{ background: photoGradient }}/>
+          <div className="mt-0.5 flex justify-between items-center">
+            <div className="text-[2.5px] text-text font-bold">NIKON Z5</div>
+            <div className="text-[2px] text-text-2 font-mono">50mm f/4 ISO250</div>
+          </div>
+        </div>
+      )
+    case 'ps-splash':
+      return (
+        <div className="w-11 h-11 bg-white shadow-md flex p-0.5 gap-0.5">
+          <div className="flex-[55%] flex flex-col p-0.5">
+            <div className="w-2 h-2 rounded-sm bg-[#001e36] flex items-center justify-center">
+              <span className="text-[2.5px] text-[#31a8ff] font-bold">Ps</span>
+            </div>
+            <div className="mt-0.5 text-[2px] text-text font-bold">Photoshop</div>
+            <div className="flex-1 flex flex-col gap-0.5 mt-0.5">
+              <div className="text-[1.5px] text-text-2">Camera: NIKON</div>
+              <div className="text-[1.5px] text-text-2">ISO: 250</div>
+              <div className="text-[1.5px] text-text-2">f/4</div>
+            </div>
+          </div>
+          <div className="flex-[45%] rounded-sm overflow-hidden" style={{ background: photoGradient }}/>
+        </div>
+      )
+    case 'lr-splash':
+      return (
+        <div className="w-11 h-11 bg-white shadow-md flex p-0.5 gap-0.5">
+          <div className="flex-[55%] flex flex-col p-0.5">
+            <div className="w-2 h-2 rounded-sm bg-[#1a2535] flex items-center justify-center">
+              <span className="text-[2.5px] text-[#0099ff] font-bold">Lr</span>
+            </div>
+            <div className="mt-0.5 text-[2px] text-text font-bold">Lightroom</div>
+            <div className="flex-1 flex flex-col gap-0.5 mt-0.5">
+              <div className="text-[1.5px] text-text-2">Camera: NIKON</div>
+              <div className="text-[1.5px] text-text-2">ISO: 250</div>
+              <div className="text-[1.5px] text-text-2">f/4</div>
+            </div>
+          </div>
+          <div className="flex-[45%] rounded-sm overflow-hidden" style={{ background: photoGradient }}/>
         </div>
       )
     default:
