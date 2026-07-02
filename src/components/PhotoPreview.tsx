@@ -12,7 +12,9 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [rendered, setRendered] = useState<HTMLCanvasElement | null>(null)
   const [scale, setScale] = useState(1)
+  const [bgUrl, setBgUrl] = useState<string | null>(null)
 
+  // 渲染带边框的完整图像
   useEffect(() => {
     const canvas = renderFrame({
       image: photo.image,
@@ -21,8 +23,20 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
       config,
     })
     setRendered(canvas)
+
+    // 生成低分辨率背景（用于模糊光晕，省内存）
+    const bgCanvas = document.createElement('canvas')
+    const MAX_BG = 600
+    const ratio = Math.min(MAX_BG / canvas.width, MAX_BG / canvas.height, 1)
+    bgCanvas.width = Math.round(canvas.width * ratio)
+    bgCanvas.height = Math.round(canvas.height * ratio)
+    const bgCtx = bgCanvas.getContext('2d')!
+    bgCtx.imageSmoothingQuality = 'medium'
+    bgCtx.drawImage(canvas, 0, 0, bgCanvas.width, bgCanvas.height)
+    setBgUrl(bgCanvas.toDataURL('image/jpeg', 0.7))
   }, [photo, config, logo])
 
+  // 自适应缩放
   useEffect(() => {
     const el = containerRef.current
     if (!el || !rendered) return
@@ -46,16 +60,44 @@ export default function PhotoPreview({ photo, config, logo }: Props) {
   }, [rendered, scale])
 
   return (
-    <div ref={containerRef} className="h-full w-full flex items-center justify-center p-10 bg-canvas relative">
+    <div ref={containerRef} className="h-full w-full flex items-center justify-center p-10 bg-canvas relative overflow-hidden">
+      {/* 背景模糊层 —— 照片自身色彩扩散为柔焦光晕 */}
+      {bgUrl && (
+        <>
+          <div
+            className="absolute inset-0 transition-opacity duration-500"
+            style={{
+              backgroundImage: `url(${bgUrl})`,
+              backgroundSize: '110% 110%',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              filter: 'blur(80px) saturate(1.35) brightness(0.92)',
+              opacity: 0.55,
+              transform: 'scale(1.08)', // 放大避免模糊边缘露白
+            }}
+            aria-hidden="true"
+          />
+          {/* 深色叠加层 —— 防止过曝 + 增强前景照片对比度 */}
+          <div
+            className="absolute inset-0"
+            style={{ background: 'rgba(28, 25, 23, 0.08)' }}
+            aria-hidden="true"
+          />
+        </>
+      )}
+
+      {/* 主图（前景） */}
       {rendered && (
         <div
-          className="fade-in shadow-elev rounded"
+          className="relative fade-in shadow-elev rounded z-10"
           style={{ width: size.w, height: size.h }}>
           <PreviewCanvas source={rendered} width={size.w} height={size.h} />
         </div>
       )}
+
+      {/* 尺寸信息角标 */}
       {rendered && (
-        <div className="absolute bottom-4 right-4 bg-surface border border-border px-2.5 py-1 rounded text-[10px] font-mono text-text-2 flex items-center gap-2 shadow-card">
+        <div className="absolute bottom-4 right-4 z-20 bg-surface/85 backdrop-blur border border-border px-2.5 py-1 rounded text-[10px] font-mono text-text-2 flex items-center gap-2 shadow-card">
           <span>{rendered.width} × {rendered.height}</span>
           <span className="text-border-strong">/</span>
           <span>{Math.round(scale * 100)}%</span>
