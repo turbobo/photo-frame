@@ -35,8 +35,8 @@ export default function PhotoUploader({ onFileSelect, loading, error }: Props) {
       <div
         onClick={() => inputRef.current?.click()}
         className={`relative w-full max-w-xl aspect-[4/3] rounded-xl bg-surface border border-dashed border-border-strong
-          flex flex-col items-center justify-center gap-6 cursor-pointer transition-all duration-fast
-          ${dragOver ? 'dropzone-active' : 'hover:border-text-3 hover:bg-canvas'}`}
+          flex flex-col items-center justify-center gap-6 cursor-pointer
+          ${dragOver ? 'dropzone-active' : ''}`}
       >
         <input ref={inputRef} type="file" accept={ACCEPT} className="hidden" onChange={handleChange} />
 
