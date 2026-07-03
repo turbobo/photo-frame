@@ -111,15 +111,40 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
       }
       const mime = FORMATS.find(f => f.key === format)!.mime
       const blob = await new Promise<Blob | null>(r => target.toBlob(r, mime, quality))
-      if (!blob) return
+      if (!blob) {
+        if (typeof window !== 'undefined') {
+          window.alert('生成图片失败，请重试')
+        }
+        return
+      }
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       const ext = format === 'jpeg' ? 'jpg' : format
       const base = photo.originalName.replace(/\.[^.]+$/, '')
-      a.href = url; a.download = `${base}-${config.id}.${ext}`
-      a.click()
-      setTimeout(() => URL.revokeObjectURL(url), 5000)
-    } finally { setBusy(false) }
+      a.href = url
+      a.download = `${base}-${config.id}.${ext}`
+      a.style.display = 'none'
+      document.body.appendChild(a)
+      // 使用 dispatchEvent + MouseEvent 代替 HTMLElement.click()
+      // 兼容性更好，Chrome 120+ 不会静默阻止
+      a.dispatchEvent(new MouseEvent('click', {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+      }))
+      // 下载触发后立即清理，避免内存泄漏和重复下载
+      setTimeout(() => {
+        try { document.body.removeChild(a) } catch {}
+        URL.revokeObjectURL(url)
+      }, 100)
+    } catch (err) {
+      console.error('handleExport failed:', err)
+      if (typeof window !== 'undefined') {
+        window.alert(`下载失败: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
