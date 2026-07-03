@@ -2,9 +2,26 @@
 import type { ExifData, TemplateConfig, GridPosition } from '../types'
 import {
   WATERMARK, withAlpha, formatExifLine, getFontStack,
-  getFontForRole, getResponsive,
+  getFontForRole, getResponsive, replaceTextVars, cleanupText,
   type ResponsiveConfig,
 } from './fonts'
+
+/**
+ * 解析自定义文本：非空时做变量替换 + 清理，否则返回 fallback
+ * 用于所有 "customText || fallback" 模式
+ */
+function resolveCustomText(
+  customText: string | undefined,
+  fallback: string,
+  exif: ExifData,
+  config: TemplateConfig,
+): string {
+  if (!customText) return fallback
+  return cleanupText(replaceTextVars(customText, exif, {
+    locationName: config.locationName,
+    copyright: config.copyright,
+  }))
+}
 
 export interface RenderCtx {
   image: HTMLImageElement
@@ -200,7 +217,7 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
   c.textBaseline = 'middle'
 
   const centerY = cardY + pad + H + bottomExtra / 2
-  const line = config.customText || [exif.model, formatExifLine(exif)].filter(Boolean).join('  ·  ')
+  const line = resolveCustomText(config.customText, [exif.model, formatExifLine(exif)].filter(Boolean).join('  ·  '), exif, config)
   if (line) {
     c.textAlign = 'center'
     c.fillText(line, canvas.width / 2, centerY)
@@ -247,7 +264,7 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.font = `italic 400 ${fontPx}px ${f.hand}`
   c.textAlign = 'center'
   c.textBaseline = 'middle'
-  const line = config.customText || exif.dateTaken || ''
+  const line = resolveCustomText(config.customText, exif.dateTaken || '', exif, config)
   if (line) c.fillText(line, canvas.width / 2, cardY + sidePad + H + bottomPad / 2)
 
   return canvas
@@ -304,7 +321,7 @@ function renderFilm({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   c.fillText(`▶ FRAME ${frame}`, pad + holeGap, canvas.height - pad / 2 - holeR - fontPx * 0.9)
 
   // 右下：EXIF
-  const exifLine = config.customText || formatExifLine(exif) || (exif.model ?? '')
+  const exifLine = resolveCustomText(config.customText, formatExifLine(exif) || (exif.model ?? ''), exif, config)
   if (exifLine) {
     c.textAlign = 'right'
     c.fillText(exifLine, canvas.width - pad - holeGap, canvas.height - pad / 2 - holeR - fontPx * 0.9)
@@ -342,7 +359,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
   const centerY = H + barH / 2
   const hasLogo = config.showLogo && logo
   const modelText = exif.model || ''
-  const lensText = exif.lens || config.customText || ''
+  const lensText = exif.lens || resolveCustomText(config.customText, '', exif, config)
 
   // 收集实际存在的参数值
   const paramValues: string[] = []
@@ -661,7 +678,7 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   c.textAlign = hasLogo ? 'left' : 'center'
   const textX = hasLogo ? leftX : canvas.width / 2
   c.font = `400 ${titleFont}px ${displayFont}`
-  const title = config.customText || exif.model || ''
+  const title = resolveCustomText(config.customText, exif.model || '', exif, config)
   if (title) c.fillText(title, textX, topY)
 
   // 下行：EXIF 参数（Inter，细体）
@@ -719,7 +736,7 @@ function renderLeica({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   c.textAlign = 'right'
   c.fillStyle = config.textColor
   c.font = `300 ${Math.round(fontPx * 0.8)}px ${f.mono}`
-  const exifText = config.customText || formatExifLine(exif) || (exif.model ?? '')
+  const exifText = resolveCustomText(config.customText, formatExifLine(exif) || (exif.model ?? ''), exif, config)
   c.fillText(exifText, W - padX, centerY)
 
   return canvas
@@ -900,7 +917,7 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.font = `italic 400 ${fontPx}px ${f.hand}`
   c.textAlign = 'left'
   c.textBaseline = 'middle'
-  const signature = config.customText || ''
+  const signature = resolveCustomText(config.customText, '', exif, config)
   if (signature) {
     c.fillText(signature, cardX + sidePad * 1.2, cardY + topPad + H + bottomPad * 0.55)
   }
@@ -975,7 +992,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
     c.textAlign = 'left'
     c.fillStyle = config.textColor
     c.font = `400 ${Math.round(fontPx * 1.2)}px ${displayFont}`
-    const title = config.customText || exif.model || '无标题'
+    const title = resolveCustomText(config.customText, exif.model || '无标题', exif, config)
     c.fillText(title, cardX + pad * 1.2, bottomY + bottomArea * 0.38)
 
     c.fillStyle = 'rgba(28,25,23,0.55)'
@@ -1064,7 +1081,7 @@ function renderVintage({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.font = `italic 400 ${fontPx}px ${f.hand}`
   c.textAlign = 'left'
   c.textBaseline = 'middle'
-  const sig = config.customText || 'Vintage'
+  const sig = resolveCustomText(config.customText, 'Vintage', exif, config)
   c.fillText(sig, pad * 1.3, pad + H + Math.round(ref * 0.03))
 
   // 右下日期
@@ -1136,7 +1153,7 @@ function renderMagazine({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   c.textAlign = 'left'
   c.fillStyle = config.textColor
   c.font = `400 ${Math.round(fontPx * 0.95)}px ${displayFont}`
-  const title = config.customText || exif.model || 'Untitled'
+  const title = resolveCustomText(config.customText, exif.model || 'Untitled', exif, config)
   c.fillText(title, padX, bottomY + bottomBar * 0.4)
 
   c.fillStyle = 'rgba(28,25,23,0.55)'
@@ -1190,7 +1207,7 @@ function renderLocation({ image, exif, config, logo }: RenderCtx): HTMLCanvasEle
   c.textBaseline = 'middle'
 
   // 右侧：地点 + 日期
-  const locationName = config.locationName || config.customText || ''
+  const locationName = config.locationName || resolveCustomText(config.customText, '', exif, config)
   const hasRight = !!(locationName || exif.dateTaken)
 
   // 预计算右侧宽度以确定左侧可用区域
@@ -1306,7 +1323,7 @@ function renderLightShadow({ image, config, exif }: RenderCtx): HTMLCanvasElemen
   // 兜底：自定义文字或日期
   const line = parts.length > 0
     ? parts.join('  ')
-    : (config.customText || exif.dateTaken || '')
+    : resolveCustomText(config.customText, exif.dateTaken || '', exif, config)
 
   if (!line) return canvas // 没有任何内容，只保留黑条
 
@@ -2049,7 +2066,7 @@ function renderTextEmbed({ image, config, exif, logo }: RenderCtx): HTMLCanvasEl
 // 模板 21：平铺水印（tiled-watermark）—— 参考 Copicseal tpl-default6
 // 全图平铺旋转水印瓦片，可调密度/角度/透明度
 // ═══════════════════════════════════════════════════════
-function renderTiledWatermark({ image, config }: RenderCtx): HTMLCanvasElement {
+function renderTiledWatermark({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   const W = image.width
   const H = image.height
   const long = Math.max(W, H)
@@ -2058,7 +2075,9 @@ function renderTiledWatermark({ image, config }: RenderCtx): HTMLCanvasElement {
   const angle = (config.watermarkAngle ?? -22) * Math.PI / 180
   const density = config.watermarkDensity ?? 1
   const opacity = config.watermarkOpacity ?? 0.18
-  const text = config.watermarkText || config.customText || 'Photo Frame'
+  const text = (config.watermarkText || config.customText)
+    ? cleanupText(replaceTextVars(config.watermarkText || config.customText, exif, { locationName: config.locationName, copyright: config.copyright }))
+    : 'Photo Frame'
 
   const canvas = document.createElement('canvas')
   canvas.width = W

@@ -1,8 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { PhotoData, TemplateConfig } from '../types'
 import { TEMPLATES, TEMPLATE_GROUPS } from '../templates'
-import { FONT_FAMILIES } from '../utils/fonts'
+import { FONT_FAMILIES, TEXT_VARIABLES } from '../utils/fonts'
 import { renderFrame } from '../utils/canvas'
+import {
+  loadPresets, savePreset, deletePreset,
+  type TemplatePreset,
+} from '../utils/presets'
 
 interface Props {
   photo: PhotoData | null
@@ -19,11 +23,72 @@ type Tab = 'style' | 'info'
 export default function ControlPanel({ photo, config, onChange, logo, loading }: Props) {
   const [tab, setTab] = useState<Tab>('style')
 
-  // 导出状态（独立于 tab，跨 tab 保持）
+  // 导出状态
   const [size, setSize] = useState('orig')
   const [format, setFormat] = useState('jpeg')
   const [quality, setQuality] = useState(0.92)
   const [busy, setBusy] = useState(false)
+
+  // 预设状态
+  const [presets, setPresets] = useState<TemplatePreset[]>([])
+  const [activePresetId, setActivePresetId] = useState<string | null>(null)
+  const customTextInputRef = useRef<HTMLInputElement>(null)
+
+  // 加载预设列表（仅客户端）
+  useEffect(() => {
+    setPresets(loadPresets())
+  }, [])
+
+  const handleSelectPreset = (preset: TemplatePreset) => {
+    onChange(preset.config)
+    setActivePresetId(preset.id)
+  }
+
+  const handleSavePreset = () => {
+    if (typeof window === 'undefined') return
+    const name = window.prompt('保存预设名称', `我的预设 ${presets.filter(p => !p.official).length + 1}`)
+    if (!name?.trim()) return
+    const newPreset = savePreset(name.trim(), config)
+    setPresets(loadPresets())
+    setActivePresetId(newPreset.id)
+  }
+
+  const handleDeletePreset = () => {
+    if (!activePresetId) return
+    const preset = presets.find(p => p.id === activePresetId)
+    if (!preset) return
+    if (preset.official) {
+      if (typeof window !== 'undefined') {
+        window.alert('官方预设不可删除')
+      }
+      return
+    }
+    if (typeof window !== 'undefined' && !window.confirm(`删除预设「${preset.name}」？`)) return
+    deletePreset(activePresetId)
+    setPresets(loadPresets())
+    setActivePresetId(null)
+  }
+
+  const handleInsertVariable = (varKey: string) => {
+    const input = customTextInputRef.current
+    if (!input) {
+      // 没有 input 引用，fallback：直接拼接到末尾
+      onChange({ ...config, customText: (config.customText || '') + `{${varKey}}` })
+      return
+    }
+    const start = input.selectionStart ?? config.customText.length
+    const end = input.selectionEnd ?? start
+    const before = (config.customText || '').slice(0, start)
+    const after = (config.customText || '').slice(end)
+    const newText = `${before}{${varKey}}${after}`
+    onChange({ ...config, customText: newText })
+    // 恢复光标位置
+    setTimeout(() => {
+      input.focus()
+      const newPos = start + varKey.length + 2
+      input.setSelectionRange(newPos, newPos)
+    }, 0)
+  }
 
   const patch = (p: Partial<TemplateConfig>) => onChange({ ...config, ...p })
 
@@ -69,7 +134,20 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
 
       {/* Content */}
       <div className="md:flex-1 md:overflow-y-auto">
-        {tab === 'style' && <StylePanel config={config} onChange={patch} quality={quality} setQuality={setQuality} format={format} />}
+        {tab === 'style' && <StylePanel
+          config={config}
+          onChange={patch}
+          quality={quality}
+          setQuality={setQuality}
+          format={format}
+          presets={presets}
+          activePresetId={activePresetId}
+          onSelectPreset={handleSelectPreset}
+          onSavePreset={handleSavePreset}
+          onDeletePreset={handleDeletePreset}
+          onInsertVariable={handleInsertVariable}
+          customTextInputRef={customTextInputRef}
+        />}
         {tab === 'info'   && <InfoPanel photo={photo} />}
       </div>
 
@@ -145,15 +223,71 @@ const FORMATS = [
 // ═══════════════════════════════════════════════════════
 function StylePanel({
   config, onChange, quality, setQuality, format,
+  presets, activePresetId, onSelectPreset, onSavePreset, onDeletePreset,
+  onInsertVariable, customTextInputRef,
 }: {
   config: TemplateConfig
   onChange: (p: Partial<TemplateConfig>) => void
   quality: number
   setQuality: (v: number) => void
   format: string
+  presets: TemplatePreset[]
+  activePresetId: string | null
+  onSelectPreset: (preset: TemplatePreset) => void
+  onSavePreset: () => void
+  onDeletePreset: () => void
+  onInsertVariable: (varKey: string) => void
+  customTextInputRef: React.RefObject<HTMLInputElement>
 }) {
   return (
     <div className="p-4 md:p-6 space-y-5 md:space-y-7">
+      {/* ─── 预设（Presets）─── */}
+      <section>
+        <div className="flex items-baseline justify-between mb-2">
+          <SectionLabel>预设</SectionLabel>
+          <span className="text-[9px] text-text-3">{presets.length} 个</span>
+        </div>
+        {/* 预设下拉选择 */}
+        <select
+          value={activePresetId ?? ''}
+          onChange={e => {
+            const id = e.target.value
+            if (!id) return
+            const preset = presets.find(p => p.id === id)
+            if (preset) onSelectPreset(preset)
+          }}
+          className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text outline-none focus:border-accent transition-colors duration-fast"
+        >
+          <option value="">— 选择预设 —</option>
+          <optgroup label="官方预设">
+            {presets.filter(p => p.official).map(p => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </optgroup>
+          {presets.some(p => !p.official) && (
+            <optgroup label="我的预设">
+              {presets.filter(p => !p.official).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </optgroup>
+          )}
+        </select>
+        {/* 操作按钮 */}
+        <div className="flex gap-2 mt-2">
+          <button
+            onClick={onSavePreset}
+            className="flex-1 py-1.5 text-[11px] rounded-md bg-accent text-surface hover:bg-accent-hover transition-colors duration-fast">
+            + 保存当前
+          </button>
+          <button
+            onClick={onDeletePreset}
+            disabled={!activePresetId}
+            className="flex-1 py-1.5 text-[11px] rounded-md border border-border text-text-2 hover:border-red-400 hover:text-red-500 transition-colors duration-fast disabled:opacity-40 disabled:cursor-not-allowed">
+            删除
+          </button>
+        </div>
+      </section>
+
       {/* Templates grid */}
       <section>
         <SectionLabel>模板</SectionLabel>
@@ -236,13 +370,33 @@ function StylePanel({
 
       {/* Custom text */}
       <section>
-        <SectionLabel>自定义文字</SectionLabel>
+        <div className="flex items-baseline justify-between mb-2">
+          <SectionLabel>自定义文字</SectionLabel>
+          <span className="text-[9px] text-text-3">支持 {'{变量}'}</span>
+        </div>
         <input
+          ref={customTextInputRef}
           type="text"
           value={config.customText}
           onChange={e => onChange({ customText: e.target.value })}
-          placeholder="摄影师 · 地点 · 日期"
-          className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast"/>
+          placeholder="如 {Make} {Model}  {FNumber} {ISO}"
+          className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast font-mono"/>
+        <p className="text-[9px] text-text-3 mt-1 mb-2 leading-relaxed">
+          点击下方按钮插入 EXIF 变量，渲染时自动替换为照片实际信息
+        </p>
+        {/* 变量插入按钮组 */}
+        <div className="flex flex-wrap gap-1">
+          {TEXT_VARIABLES.map(v => (
+            <button
+              key={v.key}
+              onClick={() => onInsertVariable(v.key)}
+              title={`插入 {${v.key}}（示例：${v.sample}）`}
+              className="px-1.5 py-1 text-[10px] rounded border border-border bg-surface hover:border-accent hover:bg-canvas-soft transition-colors duration-fast text-text-2 hover:text-text">
+              <span className="mr-0.5">{v.icon}</span>
+              <span>{v.label}</span>
+            </button>
+          ))}
+        </div>
       </section>
 
       {/* Location (only for location template) */}

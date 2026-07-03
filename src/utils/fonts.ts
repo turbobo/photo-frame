@@ -176,3 +176,70 @@ export function formatExifLine(exif: {
   if (exif.iso) parts.push(`ISO${exif.iso}`)
   return parts.join('  ·  ')
 }
+
+// ────────────────────────────────────────────────
+// 文本变量系统（参考 Copicseal replaceTextVars）
+// 用户可在自定义文字中使用 {Variable} 占位符，渲染时自动替换为 EXIF 值
+// ────────────────────────────────────────────────
+
+/** 支持的变量清单（用于 UI 展示插入按钮） */
+export const TEXT_VARIABLES: Array<{
+  key: string          // 变量名（不含大括号）
+  label: string        // 中文标签
+  sample: string       // 示例输出
+  icon?: string        // UI 图标
+}> = [
+  { key: 'Make',         label: '品牌',   sample: 'Nikon',         icon: '🏷️' },
+  { key: 'Model',        label: '型号',   sample: 'Z 5',          icon: '📷' },
+  { key: 'Lens',         label: '镜头',   sample: '24-70mm F2.8', icon: '🔭' },
+  { key: 'FocalLength',  label: '焦距',   sample: '50mm',         icon: '🎯' },
+  { key: 'FNumber',      label: '光圈',   sample: 'f/2.8',        icon: '🔅' },
+  { key: 'ExposureTime', label: '快门',   sample: '1/500',        icon: '⏱️' },
+  { key: 'ISO',          label: 'ISO',    sample: 'ISO250',       icon: '📊' },
+  { key: 'DateTime',     label: '日期',   sample: '2025-01-15',   icon: '📅' },
+  { key: 'Location',     label: '地点',   sample: '北京·故宫',     icon: '📍' },
+  { key: 'Copyright',    label: '版权',   sample: '© 2025',       icon: '©️' },
+]
+
+/**
+ * 替换文本中的 {Variable} 占位符为实际 EXIF/配置值
+ * 未匹配的变量保留原样（用户可看到占位符）
+ */
+export function replaceTextVars(
+  text: string,
+  exif: {
+    make?: string
+    model?: string
+    lens?: string
+    focalLength?: number
+    fNumber?: number
+    exposureTime?: string
+    iso?: number
+    dateTaken?: string
+  },
+  extra: {
+    locationName?: string
+    copyright?: string
+  } = {},
+): string {
+  return text
+    .replace(/\{Make\}/g, exif.make ?? '')
+    .replace(/\{Model\}/g, exif.model ?? '')
+    .replace(/\{Lens\}/g, exif.lens ?? '')
+    .replace(/\{FocalLength\}/g, exif.focalLength ? `${Math.round(exif.focalLength)}mm` : '')
+    .replace(/\{FNumber\}/g, exif.fNumber ? `f/${exif.fNumber}` : '')
+    .replace(/\{ExposureTime\}/g, exif.exposureTime ?? '')
+    .replace(/\{ISO\}/g, exif.iso ? `ISO${exif.iso}` : '')
+    .replace(/\{DateTime\}/g, exif.dateTaken ?? '')
+    .replace(/\{Location\}/g, extra.locationName ?? '')
+    .replace(/\{Copyright\}/g, extra.copyright ?? '')
+}
+
+/** 清理替换后剩余的双空格 / 末尾空格（避免变量为空时文本出现奇怪间隙） */
+export function cleanupText(text: string): string {
+  return text
+    .replace(/  +/g, ' ')       // 多个空格合并为单个
+    .replace(/\s+([·\-|])/g, '$1') // 符号前的空格去除
+    .replace(/([·\-|])\s+/g, '$1') // 符号后的空格去除
+    .trim()
+}
