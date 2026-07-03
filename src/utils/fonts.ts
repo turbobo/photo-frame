@@ -54,30 +54,31 @@ export function getFontStack(family?: FontFamily): string {
 export type FontRole = 'display' | 'ui' | 'mono' | 'hand' | 'accent'
 
 /**
+ * JetBrains Mono 的 CJK 友好回退栈（JetBrains Mono 仅覆盖拉丁）
+ * - mono 角色：JetBrains Mono + Noto Sans Mono CJK SC（保持等宽对齐，EXIF 数字对齐）
+ * - 其他角色：JetBrains Mono + Noto Sans SC（中文可读性优先）
+ */
+const JETBRAINS_MONO_STACK =
+  '"JetBrains Mono", "Noto Sans Mono CJK SC", "SF Mono", "Menlo", monospace'
+const JETBRAINS_UI_STACK =
+  '"JetBrains Mono", "Noto Sans SC", "PingFang SC", "Helvetica Neue", sans-serif'
+
+/**
  * 按角色 + 全局 fontFamily 给出实际 font stack。
- * 设计原则：mono（等宽 EXIF）/ hand（手写签名）始终保留专用栈，
- * 其他角色按用户选择的 fontFamily 做合理映射。
+ * 设计原则：用户选择影响照片上的**所有文字**（型号/EXIF/自定义文字/签名），
+ * 仅在所选字体不支持 CJK 时智能回退。
  */
 export function getFontForRole(role: FontRole, family?: FontFamily): string {
-  // mono / hand 永远用专用栈（保持 EXIF 对齐、手写温度）
-  if (role === 'mono') return FONT_MONO
-  if (role === 'hand') return FONT_HAND
-
-  // display / ui / accent 按用户选择映射
   const primary = getFontStack(family) // 用户选的主字体
-  switch (role) {
-    case 'display':
-      return primary
-    case 'ui':
-      // 等宽字体不适合 UI，回退 Inter
-      if (family === 'jetbrains') return FONT_UI
-      return primary
-    case 'accent':
-      // accent 与 display 一致
-      return primary
-    default:
-      return primary
+
+  // JetBrains Mono 仅覆盖拉丁字符，CJK 场景需要回退栈
+  if (family === 'jetbrains') {
+    if (role === 'mono') return JETBRAINS_MONO_STACK
+    return JETBRAINS_UI_STACK
   }
+
+  // 其他字体都支持 CJK，所有角色（display/ui/mono/hand/accent）统一用 primary
+  return primary
 }
 
 // ────────────────────────────────────────────────

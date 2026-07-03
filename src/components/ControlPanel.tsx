@@ -183,20 +183,39 @@ function StylePanel({
 
       {/* Font family */}
       <section>
-        <SectionLabel>字体</SectionLabel>
-        <div className="grid grid-cols-5 gap-1.5">
-          {FONT_FAMILIES.map(f => (
-            <button key={f.key}
-              onClick={() => onChange({ fontFamily: f.key })}
-              className={`py-2 rounded-md text-[12px] border transition-all duration-fast
-                ${(config.fontFamily || 'noto-serif') === f.key
-                  ? 'border-accent bg-surface shadow-card text-text'
-                  : 'border-border bg-canvas-soft text-text-2 hover:border-text-3'}`}
-              style={{ fontFamily: f.stack }}>
-              {f.label}
-            </button>
-          ))}
+        <div className="flex items-baseline justify-between mb-2">
+          <SectionLabel>字体</SectionLabel>
+          <span className="text-[9px] text-text-3">影响所有文字</span>
         </div>
+        <div className="grid grid-cols-5 gap-1.5">
+          {FONT_FAMILIES.map(f => {
+            const isActive = (config.fontFamily || 'noto-serif') === f.key
+            // 预览文本：汉字 + 字母 + 数字，体现字体风格差异
+            const sample = f.key === 'jetbrains' ? 'F/2.8'
+              : f.key === 'wenkai' ? '签名'
+              : f.key === 'noto-serif' ? '宋 Aa'
+              : f.key === 'noto-sans' ? '黑 Aa'
+              : 'Aa 1'
+            return (
+              <button key={f.key}
+                onClick={() => onChange({ fontFamily: f.key })}
+                className={`py-1.5 rounded-md text-center border transition-all duration-fast
+                  ${isActive
+                    ? 'border-accent bg-surface shadow-card text-text'
+                    : 'border-border bg-canvas-soft text-text-2 hover:border-text-3'}`}>
+                <div className="text-[13px] leading-tight" style={{ fontFamily: f.stack }}>
+                  {sample}
+                </div>
+                <div className={`text-[9px] mt-0.5 ${isActive ? 'text-text-2' : 'text-text-3'}`}>
+                  {f.label}
+                </div>
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-[9px] text-text-3 mt-1.5 leading-relaxed">
+          应用到照片上的所有文字：型号、EXIF 参数、日期、自定义文字、签名
+        </p>
       </section>
 
       {/* Toggles */}
