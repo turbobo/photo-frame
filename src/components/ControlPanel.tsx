@@ -241,56 +241,63 @@ function StylePanel({
 }) {
   return (
     <div className="p-4 md:p-6 space-y-5 md:space-y-7">
-      {/* ─── 预设（Presets）─── */}
-      <section className="p-3 md:p-4 rounded-xl border border-border bg-surface">
-        <div className="flex items-baseline justify-between mb-3">
-          <h3 className="text-[13px] font-semibold text-text">预设</h3>
-          <span className="text-[10px] text-text-3 font-mono">{presets.length} 个</span>
+      {/* ─── 预设（Presets）─── 浅蓝强调 + 水平布局 */}
+      <section className="p-3 md:p-4 rounded-xl border border-blue-200 bg-blue-50/50">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-[13px] font-semibold text-text flex items-center gap-1.5">
+            <span className="text-blue-500">💾</span>
+            <span>预设</span>
+          </h3>
+          <span className="text-[10px] text-blue-500/70 font-mono font-semibold">{presets.length} 个</span>
         </div>
-        {/* 预设下拉选择 */}
-        <select
-          value={activePresetId ?? ''}
-          onChange={e => {
-            const id = e.target.value
-            if (!id) return
-            const preset = presets.find(p => p.id === id)
-            if (preset) onSelectPreset(preset)
-          }}
-          className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text outline-none focus:border-accent transition-colors duration-fast"
-        >
-          <option value="">— 选择预设 —</option>
-          <optgroup label="官方预设">
-            {presets.filter(p => p.official).map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </optgroup>
-          {presets.some(p => !p.official) && (
-            <optgroup label="我的预设">
-              {presets.filter(p => !p.official).map(p => (
+        {/* 水平布局：下拉 + 保存 + 删除 */}
+        <div className="flex gap-1.5 items-stretch">
+          <select
+            value={activePresetId ?? ''}
+            onChange={e => {
+              const id = e.target.value
+              if (!id) return
+              const preset = presets.find(p => p.id === id)
+              if (preset) onSelectPreset(preset)
+            }}
+            className="flex-1 min-w-0 px-2 py-1.5 bg-surface border border-blue-200 rounded-md text-[11px] text-text outline-none focus:border-blue-400 transition-colors duration-fast"
+          >
+            <option value="">— 选择 —</option>
+            <optgroup label="官方">
+              {presets.filter(p => p.official).map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </optgroup>
-          )}
-        </select>
-        {/* 操作按钮 */}
-        <div className="flex gap-2 mt-2">
+            {presets.some(p => !p.official) && (
+              <optgroup label="我的">
+                {presets.filter(p => !p.official).map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </optgroup>
+            )}
+          </select>
           <button
             onClick={onSavePreset}
-            className="flex-1 py-1.5 text-[11px] rounded-md bg-accent text-surface hover:bg-accent-hover transition-colors duration-fast">
-            + 保存当前
+            title="保存当前配置为预设"
+            className="px-2 py-1.5 text-[11px] rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-fast whitespace-nowrap">
+            + 保存
           </button>
           <button
             onClick={onDeletePreset}
             disabled={!activePresetId}
-            className="flex-1 py-1.5 text-[11px] rounded-md border border-border text-text-2 hover:border-red-400 hover:text-red-500 transition-colors duration-fast disabled:opacity-40 disabled:cursor-not-allowed">
+            title="删除所选预设"
+            className="px-2 py-1.5 text-[11px] rounded-md border border-blue-200 text-text-2 hover:border-red-400 hover:text-red-500 transition-colors duration-fast disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
             删除
           </button>
         </div>
       </section>
 
-      {/* Templates grid */}
+      {/* ─── 模板（Templates）─── 白色中性 + 竖排网格 */}
       <section className="p-3 md:p-4 rounded-xl border border-border bg-surface">
-        <h3 className="text-[13px] font-semibold text-text mb-3">模板</h3>
+        <h3 className="text-[13px] font-semibold text-text mb-3 flex items-center gap-1.5">
+          <span className="text-orange-500">🎨</span>
+          <span>模板</span>
+        </h3>
         <TemplateGrid selectedId={config.id} onSelect={id => onChange({ id } as any)} />
       </section>
 
