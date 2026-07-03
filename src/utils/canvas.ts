@@ -57,14 +57,13 @@ export function makeFontCtx(config: TemplateConfig, longEdge: number): FontCtx {
  * 主入口：根据 config.id 分发到对应渲染器
  * 返回一个 offscreen canvas，用于预览与导出
  *
- * 防御性处理：强制 padding ≥ 2%，避免极小值触发渲染异常
+ * 防御性处理：仅强制 fontSize ≥ 1（避免 0 字号渲染异常）
+ * padding 由各模板自行处理（默认值已合理，padding=0 对某些模板是合法的）
  */
 export function renderFrame(ctx: RenderCtx): HTMLCanvasElement {
-  const safePadding = Math.max(2, ctx.config.padding)
   const safeFontSize = Math.max(1, ctx.config.fontSize)
   const safeConfig = {
     ...ctx.config,
-    padding: safePadding,
     fontSize: safeFontSize,
   }
   const safeCtx = { ...ctx, config: safeConfig }
@@ -1776,22 +1775,29 @@ function gridPosition(
 // ═══════════════════════════════════════════════════════
 // 七段数码管：字符定义 + 绘制 + 字符串排版
 // 段序：a(顶) b(右上) c(右下) d(底) e(左下) f(左上) g(中)
+// 使用 tagged union 区分数字（7 段定义）与特殊字符（冒号/空格/点）
 // ═══════════════════════════════════════════════════════
-const SEVEN_SEG: Record<string, boolean[]> = {
-  '0': [true,  true,  true,  true,  true,  true,  false],
-  '1': [false, true,  true,  false, false, false, false],
-  '2': [true,  true,  false, true,  true,  false, true ],
-  '3': [true,  true,  true,  true,  false, false, true ],
-  '4': [false, true,  true,  false, false, true,  true ],
-  '5': [true,  false, true,  true,  false, true,  true ],
-  '6': [true,  false, true,  true,  true,  true,  true ],
-  '7': [true,  true,  true,  false, false, false, false],
-  '8': [true,  true,  true,  true,  true,  true,  true ],
-  '9': [true,  true,  true,  true,  false, true,  true ],
-  ':': ['colon' as unknown as boolean],
-  '-': [false, false, false, false, false, false, true ],
-  ' ': ['space' as unknown as boolean],
-  '.': ['dot' as unknown as boolean],
+type SegDef =
+  | { kind: 'digit'; segments: [boolean, boolean, boolean, boolean, boolean, boolean, boolean] }
+  | { kind: 'colon' }
+  | { kind: 'dot' }
+  | { kind: 'space' }
+
+const SEVEN_SEG: Record<string, SegDef> = {
+  '0': { kind: 'digit', segments: [true,  true,  true,  true,  true,  true,  false] },
+  '1': { kind: 'digit', segments: [false, true,  true,  false, false, false, false] },
+  '2': { kind: 'digit', segments: [true,  true,  false, true,  true,  false, true ] },
+  '3': { kind: 'digit', segments: [true,  true,  true,  true,  false, false, true ] },
+  '4': { kind: 'digit', segments: [false, true,  true,  false, false, true,  true ] },
+  '5': { kind: 'digit', segments: [true,  false, true,  true,  false, true,  true ] },
+  '6': { kind: 'digit', segments: [true,  false, true,  true,  true,  true,  true ] },
+  '7': { kind: 'digit', segments: [true,  true,  true,  false, false, false, false] },
+  '8': { kind: 'digit', segments: [true,  true,  true,  true,  true,  true,  true ] },
+  '9': { kind: 'digit', segments: [true,  true,  true,  true,  false, true,  true ] },
+  '-': { kind: 'digit', segments: [false, false, false, false, false, false, true ] },
+  ':': { kind: 'colon' },
+  ' ': { kind: 'space' },
+  '.': { kind: 'dot' },
 }
 
 /** 单个七段字符的宽度（以字符高度为基准） */
@@ -1820,7 +1826,7 @@ function drawSegChar(
     c.fillRect(x, y + charH / 2 - segW / 2, segW, segW)
     return segCharWidth(' ', charH)
   }
-  if (def[0] === ('colon' as unknown as boolean)) {
+  if (def.kind === 'colon') {
     // 冒号：上下两个点
     const dotR = segW * 0.7
     c.beginPath()
@@ -1829,15 +1835,16 @@ function drawSegChar(
     c.fill()
     return charH * 0.25
   }
-  if (def[0] === ('dot' as unknown as boolean)) {
+  if (def.kind === 'dot') {
     c.fillRect(x, y + charH - segW * 1.5, segW, segW)
     return charH * 0.25
   }
-  if (def[0] === ('space' as unknown as boolean)) {
+  if (def.kind === 'space') {
     return charH * 0.4
   }
 
-  const [a, b, cc, d, e, f, g] = def as boolean[]
+  // def.kind === 'digit'
+  const [a, b, cc, d, e, f, g] = def.segments
   const charW = charH * 0.55
   const innerH = (charH - segW - gap * 2) / 2
 
@@ -1954,22 +1961,42 @@ function renderTextEmbed({ image, config, exif, logo }: RenderCtx): HTMLCanvasEl
   // 绘制原图
   c.drawImage(image, 0, 0, W, H)
 
-  // 拼装文本块
-  const line1 = exif.model ?? ''
-  const paramLine = [
-    exif.focalLength ? `${Math.round(exif.focalLength)}mm` : '',
-    exif.fNumber ? `f/${exif.fNumber}` : '',
-    exif.exposureTime ?? '',
-    exif.iso ? `ISO${exif.iso}` : '',
-  ].filter(Boolean).join('  ')
-  const dateLine = exif.dateTaken ?? ''
+  // ─── 文本内容（P0 修复：支持 customText + showExif/showLogo 开关）───
+  let line1 = ''
+  let paramLine = ''
+  let dateLine = ''
 
-  // Logo 宽度（用于水平布局）
-  const logoH = Math.round(fontPx * 1.2)
-  let logoW = 0
-  if (config.showLogo && logo) {
-    logoW = Math.round(logoH * (logo.width / logo.height))
+  const customText = config.customText
+    ? cleanupText(replaceTextVars(config.customText, exif, {
+        locationName: config.locationName,
+        copyright: config.copyright,
+      }))
+    : ''
+
+  if (customText) {
+    // 自定义模式：按 \n 拆分多行；单行时放 line1
+    const parts = customText.split('\n').map(s => s.trim()).filter(Boolean)
+    line1 = parts[0] ?? ''
+    paramLine = parts[1] ?? ''
+    dateLine = parts[2] ?? ''
+  } else {
+    // 默认 EXIF 模式：受 showExif / showLogo 开关控制
+    line1 = config.showLogo ? (exif.model ?? '') : ''
+    if (config.showExif) {
+      paramLine = [
+        exif.focalLength ? `${Math.round(exif.focalLength)}mm` : '',
+        exif.fNumber ? `f/${exif.fNumber}` : '',
+        exif.exposureTime ?? '',
+        exif.iso ? `ISO${exif.iso}` : '',
+      ].filter(Boolean).join('  ')
+      dateLine = exif.dateTaken ?? ''
+    }
   }
+
+  // Logo 宽度（仅当 showLogo=true 且有 logo 时才显示）
+  const showLogo = !!(config.showLogo && logo)
+  const logoH = Math.round(fontPx * 1.2)
+  const logoW = showLogo && logo ? Math.round(logoH * (logo.width / logo.height)) : 0
 
   // 计算文本块尺寸
   c.font = `500 ${Math.round(fontPx * 1.05)}px ${f.display}`
@@ -1980,14 +2007,21 @@ function renderTextEmbed({ image, config, exif, logo }: RenderCtx): HTMLCanvasEl
   const dateW = dateLine ? c.measureText(dateLine).width : 0
 
   let blockW: number, blockH: number
+  let showSep = false
   if (layout === 'v') {
     blockW = Math.max(line1W, paramW, dateW)
     blockH = (line1 ? fontPx * 1.5 : 0) + (paramLine ? fontPx * 1.2 : 0) + (dateLine ? fontPx * 1.1 : 0)
   } else {
-    // 水平布局：Logo | 竖线 | 型号 + 参数（隐藏日期）
-    const sepW = Math.round(fontPx * 0.15)
+    // 水平布局：仅当「Logo 或 line1 存在」且「line1 或 paramLine 存在」时才显示分隔线
+    const hasLeft = showLogo || !!line1
+    const hasRight = !!line1 || !!paramLine
+    showSep = hasLeft && hasRight
+    const sepW = showSep ? Math.round(fontPx * 0.15) : 0
     const gap = fontPx * 0.6
-    blockW = (logoW ? logoW + gap : 0) + (sepW ? sepW + gap : 0) + line1W + (paramLine ? gap + paramW : 0)
+    blockW = (logoW ? logoW + gap : 0)
+      + (showSep ? sepW + gap : 0)
+      + line1W
+      + (paramLine ? gap + paramW : 0)
     blockH = Math.max(logoH, fontPx * 1.8)
   }
 
@@ -1997,12 +2031,10 @@ function renderTextEmbed({ image, config, exif, logo }: RenderCtx): HTMLCanvasEl
   const pos = (config.embedPosition ?? 7) as GridPosition
   const { x: bx, y: by } = gridPosition(pos, W, H, blockW, blockH, padX, padY)
 
-  // 绘制（半透明）
-  c.globalAlpha = opacity
-
   if (layout === 'v') {
+    // 垂直布局：所有元素一起受 opacity 影响
+    c.globalAlpha = opacity
     let curY = by
-    // 行 1：型号
     if (line1) {
       c.fillStyle = config.textColor
       c.font = `500 ${Math.round(fontPx * 1.05)}px ${f.display}`
@@ -2011,39 +2043,45 @@ function renderTextEmbed({ image, config, exif, logo }: RenderCtx): HTMLCanvasEl
       c.fillText(line1, bx, curY)
       curY += fontPx * 1.5
     }
-    // 行 2：参数
     if (paramLine) {
       c.fillStyle = config.textColor
       c.font = `400 ${Math.round(fontPx * 0.85)}px ${f.mono}`
       c.fillText(paramLine, bx, curY)
       curY += fontPx * 1.2
     }
-    // 行 3：日期
     if (dateLine) {
       c.fillStyle = config.textColor
       c.font = `300 ${Math.round(fontPx * 0.75)}px ${f.ui}`
       c.fillText(dateLine, bx, curY)
     }
+    c.globalAlpha = 1
   } else {
-    // 水平布局：Logo | 竖线 | 型号 + 参数
+    // 水平布局：Logo 全不透明 + 文字半透明
     let curX = bx
     const centerY = by + blockH / 2
     c.textBaseline = 'middle'
 
-    if (config.showLogo && logo) {
+    // Logo：全不透明绘制（P1 修复：不受 globalAlpha 影响）
+    if (showLogo && logo) {
+      c.globalAlpha = 1
       c.drawImage(logo, curX, centerY - logoH / 2, logoW, logoH)
       curX += logoW + fontPx * 0.6
     }
-    // 竖线分隔
-    c.strokeStyle = config.textColor
-    c.lineWidth = Math.max(1, fontPx * 0.08)
-    c.beginPath()
-    c.moveTo(curX, by + blockH * 0.2)
-    c.lineTo(curX, by + blockH * 0.8)
-    c.stroke()
-    curX += Math.round(fontPx * 0.15) + fontPx * 0.6
 
-    // 型号
+    // 文字部分：半透明
+    c.globalAlpha = opacity
+
+    // 竖线分隔（P1 修复：仅当需要时绘制）
+    if (showSep) {
+      c.strokeStyle = config.textColor
+      c.lineWidth = Math.max(1, fontPx * 0.08)
+      c.beginPath()
+      c.moveTo(curX, by + blockH * 0.2)
+      c.lineTo(curX, by + blockH * 0.8)
+      c.stroke()
+      curX += Math.round(fontPx * 0.15) + fontPx * 0.6
+    }
+
     if (line1) {
       c.fillStyle = config.textColor
       c.font = `500 ${Math.round(fontPx * 1.05)}px ${f.display}`
@@ -2051,14 +2089,13 @@ function renderTextEmbed({ image, config, exif, logo }: RenderCtx): HTMLCanvasEl
       c.fillText(line1, curX, centerY)
       curX += line1W + fontPx * 0.6
     }
-    // 参数
     if (paramLine) {
       c.font = `400 ${Math.round(fontPx * 0.85)}px ${f.mono}`
       c.fillText(paramLine, curX, centerY)
     }
+    c.globalAlpha = 1
   }
 
-  c.globalAlpha = 1
   return canvas
 }
 
@@ -2092,9 +2129,11 @@ function renderTiledWatermark({ image, config, exif }: RenderCtx): HTMLCanvasEle
   const textW = c.measureText(text).width
   const textH = fontPx
 
-  // 瓦片尺寸 = 文本尺寸 × 间距（密度控制）
-  const gapX = textW * (1.4 / density)
-  const gapY = textH * (2.2 / density)
+  // 瓦片尺寸 = 文本尺寸 + 间距（密度控制）
+  // 使用 sqrt 曲线代替线性倒数：density=0.5 时间距不会过大，density=3 时也不会过密
+  // 附加最小基础间距（0.3× 文本尺寸），保证极值下仍有可读间隙
+  const gapX = textW * (0.3 + 0.8 / Math.sqrt(density))
+  const gapY = textH * (0.5 + 1.2 / Math.sqrt(density))
   const tileW = Math.round(textW + gapX)
   const tileH = Math.round(textH + gapY)
 

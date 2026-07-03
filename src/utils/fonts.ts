@@ -235,11 +235,12 @@ export function replaceTextVars(
     .replace(/\{Copyright\}/g, extra.copyright ?? '')
 }
 
-/** 清理替换后剩余的双空格 / 末尾空格（避免变量为空时文本出现奇怪间隙） */
+/** 清理替换后剩余的双空格 / 末尾空格（避免变量为空时文本出现奇怪间隙）
+ *  重要：仅对 ·（EXIF 分隔符）做空格规范化，保留 - 和 | 两侧空格让用户自行控制
+ */
 export function cleanupText(text: string): string {
   return text
-    .replace(/  +/g, ' ')       // 多个空格合并为单个
-    .replace(/\s+([·\-|])/g, '$1') // 符号前的空格去除
-    .replace(/([·\-|])\s+/g, '$1') // 符号后的空格去除
+    .replace(/  +/g, ' ')         // 多个空格合并为单个
+    .replace(/\s*·\s*/g, ' · ')   // · 两侧统一为「空格·空格」
     .trim()
 }
