@@ -14,7 +14,7 @@ export interface TemplatePreset {
   official?: boolean  // 是否官方内置（不可删除）
 }
 
-/** 官方内置预设（5 个） */
+/** 官方内置预设（8 个） */
 export const OFFICIAL_PRESETS: TemplatePreset[] = [
   {
     id: 'official-minimal-light',
@@ -77,6 +77,47 @@ export const OFFICIAL_PRESETS: TemplatePreset[] = [
       customText: '{Make} {Model}  {Lens}  {FocalLength} {FNumber} {ExposureTime} {ISO}',
       fontFamily: 'noto-serif',
       borderPadding: 5,
+    },
+    createdAt: Date.now(),
+    official: true,
+  },
+  {
+    id: 'official-leica-classic',
+    name: '徕卡经典',
+    config: {
+      ...getDefaultConfig('leica'),
+      id: 'leica' as TemplateId,
+      bgColor: '#111111',
+      textColor: '#ffffff',
+      customText: '{FocalLength} {FNumber} {ExposureTime} {ISO}',
+      fontFamily: 'inter',
+    },
+    createdAt: Date.now(),
+    official: true,
+  },
+  {
+    id: 'official-handwrite-polaroid',
+    name: '手写拍立得',
+    config: {
+      ...getDefaultConfig('instax'),
+      id: 'instax' as TemplateId,
+      customText: '{DateTime}',
+      fontFamily: 'wenkai',
+    },
+    createdAt: Date.now(),
+    official: true,
+  },
+  {
+    id: 'official-text-overlay',
+    name: '内嵌水印',
+    config: {
+      ...getDefaultConfig('text-embed'),
+      id: 'text-embed' as TemplateId,
+      customText: '{Model}\n{FocalLength} {FNumber} {ExposureTime} {ISO}\n{DateTime}',
+      fontFamily: 'inter',
+      embedLayout: 'v',
+      embedPosition: 7,
+      embedOpacity: 0.6,
     },
     createdAt: Date.now(),
     official: true,

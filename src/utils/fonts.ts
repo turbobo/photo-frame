@@ -162,6 +162,18 @@ export function withAlpha(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
+/** 基于 bgColor 生成阴影外围背景色（暗化 25%，降饱和） */
+export function shadowBgColor(hex: string): string {
+  const h = hex.replace('#', '')
+  if (h.length !== 6) return '#a8a39d'
+  const r = parseInt(h.slice(0, 2), 16)
+  const g = parseInt(h.slice(2, 4), 16)
+  const b = parseInt(h.slice(4, 6), 16)
+  const avg = (r + g + b) / 3
+  const mix = (v: number) => Math.round(v * 0.6 + avg * 0.15 + 50 * 0.25)
+  return `rgb(${mix(r)}, ${mix(g)}, ${mix(b)})`
+}
+
 /** 拼装 EXIF 参数（用 · 分隔，更优雅） */
 export function formatExifLine(exif: {
   focalLength?: number

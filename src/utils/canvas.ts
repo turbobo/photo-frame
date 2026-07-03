@@ -3,6 +3,7 @@ import type { ExifData, TemplateConfig, GridPosition } from '../types'
 import {
   WATERMARK, withAlpha, formatExifLine, getFontStack,
   getFontForRole, getResponsive, replaceTextVars, cleanupText,
+  shadowBgColor,
   type ResponsiveConfig,
 } from './fonts'
 
@@ -201,7 +202,7 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
   const c = canvas.getContext('2d')!
 
   // 画布背景（阴影外围区域）
-  c.fillStyle = '#a8a39d'
+  c.fillStyle = shadowBgColor(config.bgColor)
   c.fillRect(0, 0, canvas.width, canvas.height)
 
   // 卡片 + 三层阴影
@@ -248,7 +249,7 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   canvas.height = H + sidePad + bottomPad + spread * 2
   const c = canvas.getContext('2d')!
 
-  c.fillStyle = '#a8a39d'
+  c.fillStyle = shadowBgColor(config.bgColor)
   c.fillRect(0, 0, canvas.width, canvas.height)
 
   // 卡片 + 三层阴影
@@ -681,7 +682,7 @@ function renderInsta({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   if (title) c.fillText(title, textX, topY)
 
   // 下行：EXIF 参数（Inter，细体）
-  c.fillStyle = 'rgba(28,25,23,0.55)'
+  c.fillStyle = withAlpha(config.textColor, 0.55)
   c.font = `400 ${subFont}px ${f.ui}`
   const sub = formatExifLine(exif) || (exif.dateTaken ?? '')
   if (sub) c.fillText(sub, textX, botY)
@@ -761,7 +762,7 @@ function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   const dotR = Math.round(ref * 0.012)
 
   // 半透明背景块（提升可读性）
-  const exifText = config.customText || formatExifLine(exif) || (exif.model ?? '')
+  const exifText = resolveCustomText(config.customText, formatExifLine(exif) || (exif.model ?? ''), exif, config)
   const modelText = exif.model || ''
   c.font = `300 ${fontPx}px ${f.mono}`
   const textW = Math.max(c.measureText(exifText).width, c.measureText(modelText).width, 60)
@@ -844,7 +845,10 @@ function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   c.translate(pad / 2, canvas.height / 2)
   c.rotate(-Math.PI / 2)
   const frame = exif.dateTaken?.replace(/\D/g, '').slice(-4) || '0036'
-  c.fillText(`FUJI SUPERIA 400  ▶  ${frame}`, 0, 0)
+  const filmBrand = resolveCustomText(config.customText, '', exif, config)
+    || [exif.make, exif.model].filter(Boolean).join(' ')
+    || 'SUPERIA 400'
+  c.fillText(`${filmBrand.toUpperCase()}  ▶  ${frame}`, 0, 0)
   c.restore()
 
   // 右侧竖排：EXIF
@@ -886,7 +890,7 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   const c = canvas.getContext('2d')!
 
   // 米白底 + 微弱纸张纹理
-  c.fillStyle = '#a8a39d'
+  c.fillStyle = shadowBgColor(config.bgColor)
   c.fillRect(0, 0, canvas.width, canvas.height)
 
   // 卡片 + 三层阴影
@@ -962,7 +966,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
   const fontPx = Math.round(ref * config.fontSize / 100)
   c.textBaseline = 'middle'
   c.textAlign = 'left'
-  c.fillStyle = 'rgba(28,25,23,0.4)'
+  c.fillStyle = withAlpha(config.textColor, 0.4)
   c.font = `400 ${Math.round(fontPx * 0.75)}px ${f.ui}`
   c.fillText('📕 小红书笔记', cardX + pad * 1.2, cardY + topArea / 2)
 
@@ -994,7 +998,7 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
     const title = resolveCustomText(config.customText, exif.model || '无标题', exif, config)
     c.fillText(title, cardX + pad * 1.2, bottomY + bottomArea * 0.38)
 
-    c.fillStyle = 'rgba(28,25,23,0.55)'
+    c.fillStyle = withAlpha(config.textColor, 0.55)
     c.font = `400 ${Math.round(fontPx * 0.8)}px ${f.ui}`
     const desc = formatExifLine(exif) || (exif.lens ?? '')
     if (desc) c.fillText(desc, cardX + pad * 1.2, bottomY + bottomArea * 0.68)
@@ -1007,11 +1011,11 @@ function renderXhs({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement 
     c.textAlign = 'center'
     c.fillStyle = config.textColor
     c.font = `400 ${Math.round(fontPx * 1.2)}px ${displayFont}`
-    const title = config.customText || exif.model || '无标题'
+    const title = resolveCustomText(config.customText, exif.model || '无标题', exif, config)
     const titleY = hasDesc ? bottomY + bottomArea * 0.38 : bottomY + bottomArea * 0.5
     c.fillText(title, cardX + cardW / 2, titleY)
 
-    c.fillStyle = 'rgba(28,25,23,0.55)'
+    c.fillStyle = withAlpha(config.textColor, 0.55)
     c.font = `400 ${Math.round(fontPx * 0.8)}px ${f.ui}`
     const desc = formatExifLine(exif) || (exif.lens ?? '')
     if (desc) c.fillText(desc, cardX + cardW / 2, bottomY + bottomArea * 0.68)
@@ -1361,7 +1365,7 @@ function renderFramelessRounded({ image, config, exif, logo }: RenderCtx): HTMLC
   const f = makeFontCtx(config, long)
 
   // 边距：图片四周 + 底部 EXIF 区
-  const pad = Math.round(long * 0.04)
+  const pad = Math.max(Math.round(long * 0.02), Math.round(long * config.padding / 100))
   const infoGap = Math.round(long * 0.025) // 图片与 EXIF 间距
   const infoH = Math.round(long * 0.12)    // EXIF 区高度
 
@@ -1524,7 +1528,7 @@ function renderWhiteBorder({ image, config, exif, logo }: RenderCtx): HTMLCanvas
     exif.fNumber ? `f/${exif.fNumber}` : '',
     exif.exposureTime ?? '',
     exif.iso ? `ISO${exif.iso}` : '',
-  ].filter(Boolean).join('  ')
+  ].filter(Boolean).join('  ·  ')
   if (paramLine) c.fillText(paramLine, rightX, infoY + fontPx * 0.45)
   if (exif.dateTaken) {
     c.fillStyle = withAlpha(config.textColor, 0.55)
