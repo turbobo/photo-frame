@@ -257,6 +257,123 @@ function StylePanel({
             className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast"/>
         </section>
       )}
+
+      {/* Vintage-photo: timestamp position + color */}
+      {config.id === 'vintage-photo' && (
+        <>
+          <section>
+            <SectionLabel>时间戳位置</SectionLabel>
+            <div className="grid grid-cols-3 gap-1 p-1 bg-canvas rounded-md">
+              {([0, 1, 2, 3, 4, 5, 6, 7, 8] as const).map(p => (
+                <button key={p}
+                  onClick={() => onChange({ timestampPosition: p })}
+                  className={`aspect-square rounded text-[10px] transition-all duration-fast
+                    ${config.timestampPosition === p
+                      ? 'bg-accent text-surface shadow-card'
+                      : 'bg-surface text-text-3 border border-border hover:border-text-3'}`}>
+                  {p + 1}
+                </button>
+              ))}
+            </div>
+          </section>
+          <section>
+            <div className="flex items-center justify-between mb-2">
+              <SectionLabel>时间戳颜色</SectionLabel>
+              <input
+                type="color"
+                value={config.timestampColor || '#ff3d00'}
+                onChange={e => onChange({ timestampColor: e.target.value })}
+                className="w-6 h-6 rounded cursor-pointer bg-transparent border border-border p-0"/>
+            </div>
+            <div className="grid grid-cols-6 gap-1">
+              {['#ff3d00', '#ff6b35', '#ffcc00', '#00ff88', '#00aaff', '#ff00aa'].map(c => (
+                <button key={c}
+                  onClick={() => onChange({ timestampColor: c })}
+                  className={`aspect-square rounded border transition-all duration-fast
+                    ${(config.timestampColor || '#ff3d00') === c
+                      ? 'border-accent scale-110 shadow-card'
+                      : 'border-border hover:scale-105'}`}
+                  style={{ background: c }}/>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
+
+      {/* Text-embed: layout + position + opacity */}
+      {config.id === 'text-embed' && (
+        <>
+          <section>
+            <SectionLabel>布局方向</SectionLabel>
+            <div className="segment w-full">
+              <button data-active={config.embedLayout === 'v'}
+                onClick={() => onChange({ embedLayout: 'v' })}
+                className="flex-1">垂直</button>
+              <button data-active={config.embedLayout === 'h'}
+                onClick={() => onChange({ embedLayout: 'h' })}
+                className="flex-1">水平</button>
+            </div>
+          </section>
+          <section>
+            <SectionLabel>位置（9 宫格）</SectionLabel>
+            <div className="grid grid-cols-3 gap-1 p-1 bg-canvas rounded-md">
+              {([0, 1, 2, 3, 4, 5, 6, 7, 8] as const).map(p => (
+                <button key={p}
+                  onClick={() => onChange({ embedPosition: p })}
+                  className={`aspect-square rounded text-[10px] transition-all duration-fast
+                    ${config.embedPosition === p
+                      ? 'bg-accent text-surface shadow-card'
+                      : 'bg-surface text-text-3 border border-border hover:border-text-3'}`}>
+                  {p + 1}
+                </button>
+              ))}
+            </div>
+          </section>
+          <section>
+            <RangeRow
+              label="透明度"
+              value={Math.round((config.embedOpacity ?? 0.55) * 100)}
+              min={10} max={100} step={5} suffix="%"
+              onChange={v => onChange({ embedOpacity: v / 100 })}/>
+          </section>
+        </>
+      )}
+
+      {/* Tiled-watermark: text + angle + density + opacity */}
+      {config.id === 'tiled-watermark' && (
+        <>
+          <section>
+            <SectionLabel>水印文本</SectionLabel>
+            <input
+              type="text"
+              value={config.watermarkText || config.customText || ''}
+              onChange={e => onChange({ watermarkText: e.target.value, customText: e.target.value })}
+              placeholder="如 Photo Frame / 摄影师名字"
+              className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast"/>
+          </section>
+          <section>
+            <RangeRow
+              label="旋转角度"
+              value={config.watermarkAngle ?? -22}
+              min={-45} max={45} step={1} suffix="°"
+              onChange={v => onChange({ watermarkAngle: v })}/>
+          </section>
+          <section>
+            <RangeRow
+              label="密度"
+              value={Math.round((config.watermarkDensity ?? 1) * 10) / 10}
+              min={5} max={30} step={1} suffix="×"
+              onChange={v => onChange({ watermarkDensity: v / 10 })}/>
+          </section>
+          <section>
+            <RangeRow
+              label="透明度"
+              value={Math.round((config.watermarkOpacity ?? 0.18) * 100)}
+              min={5} max={60} step={1} suffix="%"
+              onChange={v => onChange({ watermarkOpacity: v / 100 })}/>
+          </section>
+        </>
+      )}
     </div>
   )
 }
@@ -546,6 +663,42 @@ function TemplatePreview({ id }: { id: string }) {
             </div>
           </div>
           <div className="flex-[45%] rounded-sm overflow-hidden" style={{ background: photoGradient }}/>
+        </div>
+      )
+    case 'vintage-photo':
+      return (
+        <div className="w-11 h-9 relative overflow-hidden">
+          <div className="absolute inset-0" style={{ background: photoGradient }}/>
+          <div className="absolute bottom-1 right-1 text-[3px] font-mono text-[#ff3d00] tracking-widest"
+               style={{ textShadow: '0 0 1px #ff3d00, 0 0 2px #ff3d00' }}>
+            2025-01-15
+          </div>
+        </div>
+      )
+    case 'text-embed':
+      return (
+        <div className="w-11 h-9 relative overflow-hidden">
+          <div className="absolute inset-0" style={{ background: photoGradient }}/>
+          <div className="absolute bottom-1 left-1 flex flex-col opacity-60">
+            <div className="text-[2px] text-white font-bold">NIKON Z5</div>
+            <div className="text-[1.5px] text-white font-mono">50mm f/4 ISO250</div>
+            <div className="text-[1.5px] text-white">2025-01-15</div>
+          </div>
+        </div>
+      )
+    case 'tiled-watermark':
+      return (
+        <div className="w-11 h-9 relative overflow-hidden">
+          <div className="absolute inset-0" style={{ background: photoGradient }}/>
+          <div className="absolute inset-0 flex flex-col gap-1 p-0.5 opacity-25 -rotate-12">
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="flex gap-1">
+                {[0, 1, 2].map(j => (
+                  <div key={j} className="text-[2px] text-white whitespace-nowrap">Photo Frame</div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       )
     default:

@@ -17,8 +17,12 @@ export type TemplateId =
   | 'leica' | 'red-dot' | 'dazz' | 'instax' | 'xhs' | 'vintage' | 'magazine' | 'location'
   | 'light-shadow'
   | 'frameless-rounded' | 'white-border' | 'ps-splash' | 'lr-splash'
+  | 'vintage-photo' | 'text-embed' | 'tiled-watermark'
 
 export type FontFamily = 'noto-serif' | 'noto-sans' | 'inter' | 'jetbrains' | 'wenkai'
+
+/** 9 宫格定位（0-8，左上到右下） */
+export type GridPosition = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
 
 export interface TemplateConfig {
   id: TemplateId
@@ -41,6 +45,18 @@ export interface TemplateConfig {
   copyright?: string     // 版权信息（PS/LR 启动窗）
   website?: string       // 网站文本（PS/LR 启动窗）
   isAcrylic?: boolean    // 亚克力毛玻璃效果（PS 启动窗）
+  // 老照片时间戳（vintage-photo）
+  timestampColor?: string      // 数码管颜色（默认 #ff3d00 橙红）
+  timestampPosition?: GridPosition // 9 宫格位置（默认 8 = bottom-right）
+  // 文字内嵌（text-embed）
+  embedLayout?: 'v' | 'h'            // 垂直/水平布局
+  embedPosition?: GridPosition       // 9 宫格位置（默认 7 = bottom-left）
+  embedOpacity?: number              // 0-1（默认 0.55）
+  // 平铺水印（tiled-watermark）
+  watermarkText?: string     // 水印文本（默认 customText 或 "Photo Frame"）
+  watermarkAngle?: number    // 旋转角度 -45~45 度（默认 -22）
+  watermarkDensity?: number  // 密度 0.5~3（默认 1，越大越密）
+  watermarkOpacity?: number  // 0-1（默认 0.18）
 }
 
 export interface PhotoData {

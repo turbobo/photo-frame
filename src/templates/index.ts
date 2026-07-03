@@ -1,8 +1,9 @@
-// 18 种边框模板 —— 元数据 + 默认配置
+// 21 种边框模板 —— 元数据 + 默认配置
 // 5 个原有：minimal / polaroid / film / exif / insta
 // 8 个新增：leica / red-dot / dazz / instax / xhs / vintage / magazine / location
 // 1 个参考：light-shadow（参考「光影边框」App 风格）
 // 4 个参考 Copicseal：frameless-rounded / white-border / ps-splash / lr-splash
+// 3 个 Copicseal 特色：vintage-photo / text-embed / tiled-watermark
 import type { TemplateConfig, TemplateId } from '../types'
 
 export interface TemplateMeta {
@@ -10,7 +11,7 @@ export interface TemplateMeta {
   name: string
   desc: string
   icon: string
-  group: 'basic' | 'brand' | 'film' | 'social'
+  group: 'basic' | 'brand' | 'film' | 'social' | 'effects'
 }
 
 export const TEMPLATES: TemplateMeta[] = [
@@ -36,13 +37,18 @@ export const TEMPLATES: TemplateMeta[] = [
   { id: 'xhs',       group: 'social', name: '小红书',    desc: '3:4 白底卡片 + 标题描述',         icon: '📕' },
   { id: 'magazine',  group: 'social', name: '杂志封面',  desc: '顶部大标题 + 底部 caption',       icon: '📰' },
   { id: 'location',  group: 'social', name: '地理水印',  desc: 'Logo + 型号 + 📍地名 + 日期',     icon: '📍' },
+  // ── 特效（Copicseal 特色）──
+  { id: 'vintage-photo',  group: 'effects', name: '老照片',   desc: '七段数码管时间戳 + 双层发光', icon: '🕰️' },
+  { id: 'text-embed',     group: 'effects', name: '文字内嵌', desc: 'EXIF 半透明覆盖 + 9 宫格定位', icon: '🔤' },
+  { id: 'tiled-watermark',group: 'effects', name: '平铺水印', desc: '全图平铺旋转水印瓦片',        icon: '🔁' },
 ]
 
 export const TEMPLATE_GROUPS: Array<{ id: TemplateMeta['group']; name: string }> = [
-  { id: 'basic',  name: '基础' },
-  { id: 'brand',  name: '品牌风' },
-  { id: 'film',   name: '胶片' },
-  { id: 'social', name: '社交' },
+  { id: 'basic',   name: '基础' },
+  { id: 'brand',   name: '品牌风' },
+  { id: 'film',    name: '胶片' },
+  { id: 'social',  name: '社交' },
+  { id: 'effects', name: '特效' },
 ]
 
 export function getDefaultConfig(id: TemplateId): TemplateConfig {
@@ -152,6 +158,49 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
         copyright: '© 2025 Photo Frame. All rights reserved.',
         website: 'photoframe.app',
         isAcrylic: false,
+      }
+    case 'vintage-photo':
+      return {
+        ...base,
+        padding: 0,
+        bgColor: '#000000',
+        textColor: '#ffffff',
+        fontSize: 1.5,
+        showLogo: false,
+        showExif: true,
+        shadow: false,
+        timestampColor: '#ff3d00',      // 橙红数码管色
+        timestampPosition: 8,          // 右下角（9 宫格）
+      }
+    case 'text-embed':
+      return {
+        ...base,
+        padding: 0,
+        bgColor: 'transparent',
+        textColor: '#ffffff',
+        fontSize: 1.4,
+        showLogo: true,
+        showExif: true,
+        shadow: false,
+        embedLayout: 'v',
+        embedPosition: 7,              // 左下角
+        embedOpacity: 0.55,
+      }
+    case 'tiled-watermark':
+      return {
+        ...base,
+        padding: 0,
+        bgColor: 'transparent',
+        textColor: '#ffffff',
+        fontSize: 1.8,
+        showLogo: false,
+        showExif: false,
+        shadow: false,
+        customText: 'Photo Frame',
+        watermarkText: 'Photo Frame',
+        watermarkAngle: -22,
+        watermarkDensity: 1,
+        watermarkOpacity: 0.18,
       }
   }
 }

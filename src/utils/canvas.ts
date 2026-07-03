@@ -1,5 +1,5 @@
-// Canvas 渲染核心 —— 18 种边框模板绘制
-import type { ExifData, TemplateConfig } from '../types'
+// Canvas 渲染核心 —— 21 种边框模板绘制
+import type { ExifData, TemplateConfig, GridPosition } from '../types'
 import {
   WATERMARK, withAlpha, formatExifLine, getFontStack,
   getFontForRole, getResponsive,
@@ -71,6 +71,9 @@ export function renderFrame(ctx: RenderCtx): HTMLCanvasElement {
     case 'white-border': return renderWhiteBorder(safeCtx)
     case 'ps-splash': return renderPsSplash(safeCtx)
     case 'lr-splash': return renderLrSplash(safeCtx)
+    case 'vintage-photo': return renderVintagePhoto(safeCtx)
+    case 'text-embed': return renderTextEmbed(safeCtx)
+    case 'tiled-watermark': return renderTiledWatermark(safeCtx)
     default:         return renderMinimal(safeCtx)
   }
 }
@@ -1725,4 +1728,385 @@ function renderLrSplash(ctx: RenderCtx): HTMLCanvasElement {
     brandText: 'Lr',
     productName: 'Adobe Lightroom',
   })
+}
+
+// ═══════════════════════════════════════════════════════
+// 通用工具：9 宫格定位（0-8，左上到右下）
+// ═══════════════════════════════════════════════════════
+function gridPosition(
+  pos: GridPosition,
+  canvasW: number,
+  canvasH: number,
+  contentW: number,
+  contentH: number,
+  padX: number,
+  padY: number,
+): { x: number; y: number } {
+  const row = Math.floor(pos / 3)
+  const col = pos % 3
+  const usableW = canvasW - padX * 2
+  const usableH = canvasH - padY * 2
+  let x: number, y: number
+  if (col === 0)      x = padX
+  else if (col === 1) x = padX + (usableW - contentW) / 2
+  else                x = padX + usableW - contentW
+  if (row === 0)      y = padY
+  else if (row === 1) y = padY + (usableH - contentH) / 2
+  else                y = padY + usableH - contentH
+  return { x, y }
+}
+
+// ═══════════════════════════════════════════════════════
+// 七段数码管：字符定义 + 绘制 + 字符串排版
+// 段序：a(顶) b(右上) c(右下) d(底) e(左下) f(左上) g(中)
+// ═══════════════════════════════════════════════════════
+const SEVEN_SEG: Record<string, boolean[]> = {
+  '0': [true,  true,  true,  true,  true,  true,  false],
+  '1': [false, true,  true,  false, false, false, false],
+  '2': [true,  true,  false, true,  true,  false, true ],
+  '3': [true,  true,  true,  true,  false, false, true ],
+  '4': [false, true,  true,  false, false, true,  true ],
+  '5': [true,  false, true,  true,  false, true,  true ],
+  '6': [true,  false, true,  true,  true,  true,  true ],
+  '7': [true,  true,  true,  false, false, false, false],
+  '8': [true,  true,  true,  true,  true,  true,  true ],
+  '9': [true,  true,  true,  true,  false, true,  true ],
+  ':': ['colon' as unknown as boolean],
+  '-': [false, false, false, false, false, false, true ],
+  ' ': ['space' as unknown as boolean],
+  '.': ['dot' as unknown as boolean],
+}
+
+/** 单个七段字符的宽度（以字符高度为基准） */
+function segCharWidth(char: string, charH: number): number {
+  if (char === ':' || char === '.') return charH * 0.25
+  if (char === ' ') return charH * 0.4
+  return charH * 0.55
+}
+
+/** 在 (x, y) 绘制单个七段字符，返回字符宽度 */
+function drawSegChar(
+  c: CanvasRenderingContext2D,
+  char: string,
+  x: number,
+  y: number,
+  charH: number,
+  color: string,
+): number {
+  const def = SEVEN_SEG[char]
+  const segW = Math.max(1, charH * 0.14)   // 段宽
+  const gap = Math.max(0.5, charH * 0.05)  // 段间
+  c.fillStyle = color
+
+  if (!def) {
+    // 未知字符 → 绘制点
+    c.fillRect(x, y + charH / 2 - segW / 2, segW, segW)
+    return segCharWidth(' ', charH)
+  }
+  if (def[0] === ('colon' as unknown as boolean)) {
+    // 冒号：上下两个点
+    const dotR = segW * 0.7
+    c.beginPath()
+    c.arc(x + dotR, y + charH * 0.32, dotR, 0, Math.PI * 2)
+    c.arc(x + dotR, y + charH * 0.68, dotR, 0, Math.PI * 2)
+    c.fill()
+    return charH * 0.25
+  }
+  if (def[0] === ('dot' as unknown as boolean)) {
+    c.fillRect(x, y + charH - segW * 1.5, segW, segW)
+    return charH * 0.25
+  }
+  if (def[0] === ('space' as unknown as boolean)) {
+    return charH * 0.4
+  }
+
+  const [a, b, cc, d, e, f, g] = def as boolean[]
+  const charW = charH * 0.55
+  const innerH = (charH - segW - gap * 2) / 2
+
+  // a: 顶部水平
+  if (a) c.fillRect(x + segW + gap, y, charW - segW * 2 - gap * 2, segW)
+  // d: 底部水平
+  if (d) c.fillRect(x + segW + gap, y + charH - segW, charW - segW * 2 - gap * 2, segW)
+  // g: 中部水平
+  if (g) c.fillRect(x + segW + gap, y + segW + gap + innerH, charW - segW * 2 - gap * 2, segW)
+  // f: 左上垂直
+  if (f) c.fillRect(x, y + segW + gap, segW, innerH)
+  // b: 右上垂直
+  if (b) c.fillRect(x + charW - segW, y + segW + gap, segW, innerH)
+  // e: 左下垂直
+  if (e) c.fillRect(x, y + segW * 2 + gap * 2 + innerH, segW, innerH)
+  // c: 右下垂直
+  if (cc) c.fillRect(x + charW - segW, y + segW * 2 + gap * 2 + innerH, segW, innerH)
+
+  return charW
+}
+
+/** 测量七段字符串总宽度 */
+function measureSegString(text: string, charH: number): number {
+  let w = 0
+  for (const ch of text) w += segCharWidth(ch, charH)
+  return w
+}
+
+/** 绘制七段字符串 + 双层发光（drop-shadow × 2） */
+function drawSegString(
+  c: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  charH: number,
+  color: string,
+): void {
+  // 第 1 层发光（大范围柔和）
+  c.save()
+  c.shadowColor = color
+  c.shadowBlur = charH * 0.35
+  c.shadowOffsetX = 0
+  c.shadowOffsetY = 0
+  let curX = x
+  for (const ch of text) curX += drawSegChar(c, ch, curX, y, charH, color)
+  c.restore()
+
+  // 第 2 层发光（小范围强烈）
+  c.save()
+  c.shadowColor = color
+  c.shadowBlur = charH * 0.12
+  curX = x
+  for (const ch of text) curX += drawSegChar(c, ch, curX, y, charH, color)
+  c.restore()
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 19：老照片（vintage-photo）—— 参考 Copicseal tpl-default4
+// 图片上叠加七段数码管时间戳 + 双层发光
+// ═══════════════════════════════════════════════════════
+function renderVintagePhoto({ image, config, exif }: RenderCtx): HTMLCanvasElement {
+  const W = image.width
+  const H = image.height
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const c = canvas.getContext('2d')!
+
+  // 绘制原图
+  c.drawImage(image, 0, 0, W, H)
+
+  // 时间戳文本：EXIF 日期（YYYY-MM-DD HH:MM:SS 或仅日期）
+  let ts = exif.dateTaken ?? ''
+  if (ts && ts.length === 10) ts += ' 00:00:00' // 仅有日期时补 0 时间
+  if (!ts) return canvas // 没有时间信息，不渲染
+
+  // 字符高度：基于图片短边的 5%
+  const shortEdge = Math.min(W, H)
+  const charH = Math.round(shortEdge * 0.05)
+  const color = config.timestampColor ?? '#ff3d00'
+
+  // 测量字符串宽度
+  const tsW = measureSegString(ts, charH)
+
+  // 9 宫格定位（边距 4%）
+  const padX = Math.round(W * 0.04)
+  const padY = Math.round(H * 0.04)
+  const pos = (config.timestampPosition ?? 8) as GridPosition
+  const { x, y } = gridPosition(pos, W, H, tsW, charH, padX, padY)
+
+  drawSegString(c, ts, x, y, charH, color)
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 20：文字内嵌（text-embed）—— 参考 Copicseal tpl-default5
+// EXIF 信息半透明覆盖在图片上，支持 V/H 双布局 + 9 宫格定位
+// ═══════════════════════════════════════════════════════
+function renderTextEmbed({ image, config, exif, logo }: RenderCtx): HTMLCanvasElement {
+  const W = image.width
+  const H = image.height
+  const long = Math.max(W, H)
+  const f = makeFontCtx(config, long)
+  const fontPx = Math.max(10, Math.round(long * config.fontSize / 100))
+  const opacity = config.embedOpacity ?? 0.55
+  const layout = config.embedLayout ?? 'v'
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const c = canvas.getContext('2d')!
+
+  // 绘制原图
+  c.drawImage(image, 0, 0, W, H)
+
+  // 拼装文本块
+  const line1 = exif.model ?? ''
+  const paramLine = [
+    exif.focalLength ? `${Math.round(exif.focalLength)}mm` : '',
+    exif.fNumber ? `f/${exif.fNumber}` : '',
+    exif.exposureTime ?? '',
+    exif.iso ? `ISO${exif.iso}` : '',
+  ].filter(Boolean).join('  ')
+  const dateLine = exif.dateTaken ?? ''
+
+  // Logo 宽度（用于水平布局）
+  const logoH = Math.round(fontPx * 1.2)
+  let logoW = 0
+  if (config.showLogo && logo) {
+    logoW = Math.round(logoH * (logo.width / logo.height))
+  }
+
+  // 计算文本块尺寸
+  c.font = `500 ${Math.round(fontPx * 1.05)}px ${f.display}`
+  const line1W = line1 ? c.measureText(line1).width : 0
+  c.font = `400 ${Math.round(fontPx * 0.85)}px ${f.mono}`
+  const paramW = paramLine ? c.measureText(paramLine).width : 0
+  c.font = `300 ${Math.round(fontPx * 0.75)}px ${f.ui}`
+  const dateW = dateLine ? c.measureText(dateLine).width : 0
+
+  let blockW: number, blockH: number
+  if (layout === 'v') {
+    blockW = Math.max(line1W, paramW, dateW)
+    blockH = (line1 ? fontPx * 1.5 : 0) + (paramLine ? fontPx * 1.2 : 0) + (dateLine ? fontPx * 1.1 : 0)
+  } else {
+    // 水平布局：Logo | 竖线 | 型号 + 参数（隐藏日期）
+    const sepW = Math.round(fontPx * 0.15)
+    const gap = fontPx * 0.6
+    blockW = (logoW ? logoW + gap : 0) + (sepW ? sepW + gap : 0) + line1W + (paramLine ? gap + paramW : 0)
+    blockH = Math.max(logoH, fontPx * 1.8)
+  }
+
+  // 9 宫格定位
+  const padX = Math.round(W * 0.05)
+  const padY = Math.round(H * 0.05)
+  const pos = (config.embedPosition ?? 7) as GridPosition
+  const { x: bx, y: by } = gridPosition(pos, W, H, blockW, blockH, padX, padY)
+
+  // 绘制（半透明）
+  c.globalAlpha = opacity
+
+  if (layout === 'v') {
+    let curY = by
+    // 行 1：型号
+    if (line1) {
+      c.fillStyle = config.textColor
+      c.font = `500 ${Math.round(fontPx * 1.05)}px ${f.display}`
+      c.textAlign = 'left'
+      c.textBaseline = 'top'
+      c.fillText(line1, bx, curY)
+      curY += fontPx * 1.5
+    }
+    // 行 2：参数
+    if (paramLine) {
+      c.fillStyle = config.textColor
+      c.font = `400 ${Math.round(fontPx * 0.85)}px ${f.mono}`
+      c.fillText(paramLine, bx, curY)
+      curY += fontPx * 1.2
+    }
+    // 行 3：日期
+    if (dateLine) {
+      c.fillStyle = config.textColor
+      c.font = `300 ${Math.round(fontPx * 0.75)}px ${f.ui}`
+      c.fillText(dateLine, bx, curY)
+    }
+  } else {
+    // 水平布局：Logo | 竖线 | 型号 + 参数
+    let curX = bx
+    const centerY = by + blockH / 2
+    c.textBaseline = 'middle'
+
+    if (config.showLogo && logo) {
+      c.drawImage(logo, curX, centerY - logoH / 2, logoW, logoH)
+      curX += logoW + fontPx * 0.6
+    }
+    // 竖线分隔
+    c.strokeStyle = config.textColor
+    c.lineWidth = Math.max(1, fontPx * 0.08)
+    c.beginPath()
+    c.moveTo(curX, by + blockH * 0.2)
+    c.lineTo(curX, by + blockH * 0.8)
+    c.stroke()
+    curX += Math.round(fontPx * 0.15) + fontPx * 0.6
+
+    // 型号
+    if (line1) {
+      c.fillStyle = config.textColor
+      c.font = `500 ${Math.round(fontPx * 1.05)}px ${f.display}`
+      c.textAlign = 'left'
+      c.fillText(line1, curX, centerY)
+      curX += line1W + fontPx * 0.6
+    }
+    // 参数
+    if (paramLine) {
+      c.font = `400 ${Math.round(fontPx * 0.85)}px ${f.mono}`
+      c.fillText(paramLine, curX, centerY)
+    }
+  }
+
+  c.globalAlpha = 1
+  return canvas
+}
+
+// ═══════════════════════════════════════════════════════
+// 模板 21：平铺水印（tiled-watermark）—— 参考 Copicseal tpl-default6
+// 全图平铺旋转水印瓦片，可调密度/角度/透明度
+// ═══════════════════════════════════════════════════════
+function renderTiledWatermark({ image, config }: RenderCtx): HTMLCanvasElement {
+  const W = image.width
+  const H = image.height
+  const long = Math.max(W, H)
+  const f = makeFontCtx(config, long)
+  const fontPx = Math.max(10, Math.round(long * config.fontSize / 100))
+  const angle = (config.watermarkAngle ?? -22) * Math.PI / 180
+  const density = config.watermarkDensity ?? 1
+  const opacity = config.watermarkOpacity ?? 0.18
+  const text = config.watermarkText || config.customText || 'Photo Frame'
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const c = canvas.getContext('2d')!
+
+  // 绘制原图
+  c.drawImage(image, 0, 0, W, H)
+
+  // 测量单个水印文本尺寸
+  c.font = `400 ${fontPx}px ${f.display}`
+  const textW = c.measureText(text).width
+  const textH = fontPx
+
+  // 瓦片尺寸 = 文本尺寸 × 间距（密度控制）
+  const gapX = textW * (1.4 / density)
+  const gapY = textH * (2.2 / density)
+  const tileW = Math.round(textW + gapX)
+  const tileH = Math.round(textH + gapY)
+
+  // 创建瓦片 canvas
+  const tile = document.createElement('canvas')
+  tile.width = tileW
+  tile.height = tileH
+  const tc = tile.getContext('2d')!
+  tc.fillStyle = config.textColor
+  tc.font = `400 ${fontPx}px ${f.display}`
+  tc.textAlign = 'center'
+  tc.textBaseline = 'middle'
+  tc.fillText(text, tileW / 2, tileH / 2)
+
+  // 计算覆盖画布所需的对角线长度（旋转后瓦片需要重复的范围）
+  const diag = Math.ceil(Math.sqrt(W * W + H * H))
+  const tilesX = Math.ceil(diag / tileW) + 2
+  const tilesY = Math.ceil(diag / tileH) + 2
+
+  // 用 pattern 平铺（但 pattern 不支持旋转，所以手动绘制旋转后的瓦片网格）
+  c.save()
+  c.globalAlpha = opacity
+  c.translate(W / 2, H / 2)
+  c.rotate(angle)
+  c.translate(-diag / 2, -diag / 2)
+  for (let ty = 0; ty < tilesY; ty++) {
+    for (let tx = 0; tx < tilesX; tx++) {
+      c.drawImage(tile, tx * tileW, ty * tileH)
+    }
+  }
+  c.restore()
+
+  return canvas
 }
