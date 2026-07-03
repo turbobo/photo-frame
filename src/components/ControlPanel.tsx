@@ -242,10 +242,10 @@ function StylePanel({
   return (
     <div className="p-4 md:p-6 space-y-5 md:space-y-7">
       {/* ─── 预设（Presets）─── */}
-      <section>
-        <div className="flex items-baseline justify-between mb-2">
-          <SectionLabel>预设</SectionLabel>
-          <span className="text-[9px] text-text-3">{presets.length} 个</span>
+      <section className="p-3 md:p-4 rounded-xl border border-border bg-surface">
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 className="text-[13px] font-semibold text-text">预设</h3>
+          <span className="text-[10px] text-text-3 font-mono">{presets.length} 个</span>
         </div>
         {/* 预设下拉选择 */}
         <select
@@ -289,8 +289,8 @@ function StylePanel({
       </section>
 
       {/* Templates grid */}
-      <section>
-        <SectionLabel>模板</SectionLabel>
+      <section className="p-3 md:p-4 rounded-xl border border-border bg-surface">
+        <h3 className="text-[13px] font-semibold text-text mb-3">模板</h3>
         <TemplateGrid selectedId={config.id} onSelect={id => onChange({ id } as any)} />
       </section>
 
@@ -542,7 +542,9 @@ function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: 
         const items = TEMPLATES.filter(t => t.group === group.id)
         return (
           <div key={group.id}>
-            <p className="font-caption text-text-3 mb-2">{group.name}</p>
+            <p className="text-[10px] font-semibold text-text-2 uppercase tracking-wider mb-2">
+              {group.name}
+            </p>
             <div className="grid grid-cols-2 gap-2">
               {items.map(t => (
                 <button
