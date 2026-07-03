@@ -145,6 +145,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
           onSelectPreset={handleSelectPreset}
           onSavePreset={handleSavePreset}
           onDeletePreset={handleDeletePreset}
+          onClosePreset={() => setActivePresetId(null)}
           onInsertVariable={handleInsertVariable}
           customTextInputRef={customTextInputRef}
         />}
@@ -223,7 +224,7 @@ const FORMATS = [
 // ═══════════════════════════════════════════════════════
 function StylePanel({
   config, onChange, quality, setQuality, format,
-  presets, activePresetId, onSelectPreset, onSavePreset, onDeletePreset,
+  presets, activePresetId, onSelectPreset, onSavePreset, onDeletePreset, onClosePreset,
   onInsertVariable, customTextInputRef,
 }: {
   config: TemplateConfig
@@ -236,6 +237,7 @@ function StylePanel({
   onSelectPreset: (preset: TemplatePreset) => void
   onSavePreset: () => void
   onDeletePreset: () => void
+  onClosePreset: () => void
   onInsertVariable: (varKey: string) => void
   customTextInputRef: React.RefObject<HTMLInputElement>
 }) {
@@ -250,32 +252,48 @@ function StylePanel({
           </h3>
           <span className="text-[10px] text-blue-500/70 font-mono font-semibold">{presets.length} 个</span>
         </div>
-        {/* 水平布局：下拉 + 保存 + 删除 */}
+        {/* 水平布局：下拉（含关闭按钮） + 保存 + 删除 */}
         <div className="flex gap-1.5 items-stretch">
-          <select
-            value={activePresetId ?? ''}
-            onChange={e => {
-              const id = e.target.value
-              if (!id) return
-              const preset = presets.find(p => p.id === id)
-              if (preset) onSelectPreset(preset)
-            }}
-            className="flex-1 min-w-0 px-2 py-1.5 bg-surface border border-blue-200 rounded-md text-[11px] text-text outline-none focus:border-blue-400 transition-colors duration-fast"
-          >
-            <option value="">— 选择 —</option>
-            <optgroup label="官方">
-              {presets.filter(p => p.official).map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </optgroup>
-            {presets.some(p => !p.official) && (
-              <optgroup label="我的">
-                {presets.filter(p => !p.official).map(p => (
+          <div className="relative flex-1 min-w-0">
+            <select
+              value={activePresetId ?? ''}
+              onChange={e => {
+                const id = e.target.value
+                if (!id) {
+                  // 选择 placeholder 时关闭预设高亮（不改 config）
+                  onClosePreset()
+                  return
+                }
+                const preset = presets.find(p => p.id === id)
+                if (preset) onSelectPreset(preset)
+              }}
+              className="w-full px-2 py-1.5 pr-7 bg-surface border border-blue-200 rounded-md text-[11px] text-text outline-none focus:border-blue-400 transition-colors duration-fast"
+            >
+              <option value="">— 选择 —</option>
+              <optgroup label="官方">
+                {presets.filter(p => p.official).map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </optgroup>
+              {presets.some(p => !p.official) && (
+                <optgroup label="我的">
+                  {presets.filter(p => !p.official).map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            {/* 关闭预设按钮：仅在有激活预设时显示 */}
+            {activePresetId && (
+              <button
+                type="button"
+                onClick={() => onClosePreset()}
+                title="关闭预设高亮（不改当前配置）"
+                className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center text-[10px] font-bold leading-none transition-colors duration-fast">
+                ×
+              </button>
             )}
-          </select>
+          </div>
           <button
             onClick={onSavePreset}
             title="保存当前配置为预设"
