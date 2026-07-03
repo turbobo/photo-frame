@@ -260,7 +260,7 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   // 底部签名文字
   const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `italic 400 ${fontPx}px ${f.hand}`
+  c.font = `400 ${fontPx}px ${f.hand}`
   c.textAlign = 'center'
   c.textBaseline = 'middle'
   const line = resolveCustomText(config.customText, exif.dateTaken || '', exif, config)
@@ -913,7 +913,7 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   // 底部手写签名
   const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `italic 400 ${fontPx}px ${f.hand}`
+  c.font = `400 ${fontPx}px ${f.hand}`
   c.textAlign = 'left'
   c.textBaseline = 'middle'
   const signature = resolveCustomText(config.customText, '', exif, config)
@@ -1077,7 +1077,7 @@ function renderVintage({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   // 底部签名
   const fontPx = Math.round(ref * config.fontSize / 100)
   c.fillStyle = config.textColor
-  c.font = `italic 400 ${fontPx}px ${f.hand}`
+  c.font = `400 ${fontPx}px ${f.hand}`
   c.textAlign = 'left'
   c.textBaseline = 'middle'
   const sig = resolveCustomText(config.customText, 'Vintage', exif, config)

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, useMemo } from 'react'
 
 interface Props {
   onFileSelect: (f: File) => void
@@ -11,6 +11,9 @@ const ACCEPT = '.jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf
 export default function PhotoUploader({ onFileSelect, loading, error }: Props) {
   const [dragOver, setDragOver] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const isMobile = useMemo(() => /iPhone|iPad|iPod|Android/i.test(navigator.userAgent), [])
+  const isMac = useMemo(() => !isMobile && /Mac/i.test(navigator.platform), [isMobile])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -52,7 +55,9 @@ export default function PhotoUploader({ onFileSelect, loading, error }: Props) {
           <p className="text-[16px] md:text-[18px] font-medium text-text tracking-tight">上传照片</p>
           <p className="text-[12px] text-text-2 flex items-center justify-center gap-1.5">
             拖拽 · 粘贴
-            <kbd className="font-mono text-[10px] bg-canvas border border-border rounded px-1 py-0.5">⌘V</kbd>
+            {!isMobile && (
+              <kbd className="font-mono text-[10px] bg-canvas border border-border rounded px-1 py-0.5">{isMac ? '⌘' : 'Ctrl+'}V</kbd>
+            )}
             · 点击选择
           </p>
           <p className="text-[11px] text-text-3 pt-2 md:pt-3">

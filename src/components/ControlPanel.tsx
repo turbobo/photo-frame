@@ -96,6 +96,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
     if (!photo) return
     setBusy(true)
     try {
+      await document.fonts.ready
       const source = renderFrame({ image: photo.image, exif: photo.exif, logo, config })
       const sizeOpt = SIZE_OPTIONS.find(o => o.key === size)!
       let target = source

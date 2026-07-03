@@ -17,26 +17,34 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
   const [scale, setScale] = useState(1)
   const [bgUrl, setBgUrl] = useState<string | null>(null)
 
-  // 渲染带边框的完整图像
+  // 渲染带边框的完整图像（等待字体加载完成后再渲染，避免首次渲染用错字体）
   useEffect(() => {
-    const canvas = renderFrame({
-      image: photo.image,
-      exif: photo.exif,
-      logo,
-      config,
-    })
-    setRendered(canvas)
+    let cancelled = false
+    const doRender = async () => {
+      await document.fonts.ready
+      if (cancelled) return
 
-    // 生成低分辨率背景（用于模糊光晕，省内存）
-    const bgCanvas = document.createElement('canvas')
-    const MAX_BG = 600
-    const ratio = Math.min(MAX_BG / canvas.width, MAX_BG / canvas.height, 1)
-    bgCanvas.width = Math.round(canvas.width * ratio)
-    bgCanvas.height = Math.round(canvas.height * ratio)
-    const bgCtx = bgCanvas.getContext('2d')!
-    bgCtx.imageSmoothingQuality = 'medium'
-    bgCtx.drawImage(canvas, 0, 0, bgCanvas.width, bgCanvas.height)
-    setBgUrl(bgCanvas.toDataURL('image/jpeg', 0.7))
+      const canvas = renderFrame({
+        image: photo.image,
+        exif: photo.exif,
+        logo,
+        config,
+      })
+      setRendered(canvas)
+
+      // 生成低分辨率背景（用于模糊光晕，省内存）
+      const bgCanvas = document.createElement('canvas')
+      const MAX_BG = 600
+      const ratio = Math.min(MAX_BG / canvas.width, MAX_BG / canvas.height, 1)
+      bgCanvas.width = Math.round(canvas.width * ratio)
+      bgCanvas.height = Math.round(canvas.height * ratio)
+      const bgCtx = bgCanvas.getContext('2d')!
+      bgCtx.imageSmoothingQuality = 'medium'
+      bgCtx.drawImage(canvas, 0, 0, bgCanvas.width, bgCanvas.height)
+      setBgUrl(bgCanvas.toDataURL('image/jpeg', 0.7))
+    }
+    doRender()
+    return () => { cancelled = true }
   }, [photo, config, logo])
 
   // 自适应缩放

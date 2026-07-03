@@ -14,7 +14,7 @@ export const FONT_DISPLAY = '"Noto Serif SC", "Songti SC", "Source Han Serif SC"
  * 用于：副标题、地点、标签、次要文字
  * 特点：干净、现代、可读性极佳
  */
-export const FONT_UI = '"Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif'
+export const FONT_UI = '"Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif'
 
 /**
  * Mono — JetBrains Mono

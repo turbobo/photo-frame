@@ -22,8 +22,8 @@ export default {
         'overlay-dark': 'rgba(28, 25, 23, 0.55)',   // 深色遮罩
       },
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'Helvetica Neue', 'PingFang SC', 'sans-serif'],
-        mono: ['SF Mono', 'JetBrains Mono', 'Menlo', 'Consolas', 'monospace'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'SF Pro Display', 'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', 'sans-serif'],
+        mono: ['JetBrains Mono', 'SF Mono', 'Menlo', 'Consolas', 'monospace'],
       },
       fontSize: {
         'xs':   ['10px', { lineHeight: '1.4', letterSpacing: '0.02em' }],
