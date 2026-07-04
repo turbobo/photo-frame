@@ -245,6 +245,17 @@ const FORMATS = [
   { key: 'webp', label: 'WebP', mime: 'image/webp' },
 ]
 
+/** 根据预设配置生成简短效果描述（用于下拉选项） */
+function describePresetEffect(p: TemplatePreset): string {
+  const tpl = TEMPLATES.find(t => t.id === p.config.id)
+  if (!tpl) return ''
+  const fontLabel = FONT_FAMILIES.find(f => f.key === p.config.fontFamily)?.label || ''
+  const parts: string[] = [tpl.name]
+  if (fontLabel) parts.push(fontLabel)
+  if (p.config.shadow) parts.push('阴影')
+  return parts.join(' · ')
+}
+
 // ═══════════════════════════════════════════════════════
 // Style Tab
 // ═══════════════════════════════════════════════════════
@@ -271,13 +282,21 @@ function StylePanel({
     <div className="p-4 md:p-6 space-y-5 md:space-y-7">
       {/* ─── 预设（Presets）─── 浅蓝强调 + 水平布局 */}
       <section className="p-3 md:p-4 rounded-xl border border-blue-200 bg-blue-50/50">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-1">
           <h3 className="text-[13px] font-semibold text-text flex items-center gap-1.5">
             <span className="text-blue-500">💾</span>
             <span>预设</span>
+            <span
+              title="预设 = 一键应用整套配置（模板 + 字体 + 文字 + 颜色），保存后可复用"
+              className="w-3.5 h-3.5 rounded-full bg-blue-100 text-blue-600 text-[9px] font-bold flex items-center justify-center cursor-help">
+              ?
+            </span>
           </h3>
           <span className="text-[10px] text-blue-500/70 font-mono font-semibold">{presets.length} 个</span>
         </div>
+        <p className="text-[9px] text-blue-700/70 mb-2 leading-relaxed">
+          一键应用整套配置 · 微调后可另存为新预设
+        </p>
         {/* 水平布局：下拉（含关闭按钮） + 保存 + 删除 */}
         <div className="flex gap-1.5 items-stretch">
           <div className="relative flex-1 min-w-0">
@@ -297,15 +316,25 @@ function StylePanel({
             >
               <option value="">— 选择 —</option>
               <optgroup label="官方">
-                {presets.filter(p => p.official).map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
+                {presets.filter(p => p.official).map(p => {
+                  const effectDesc = describePresetEffect(p)
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {p.name}{effectDesc ? ` · ${effectDesc}` : ''}
+                    </option>
+                  )
+                })}
               </optgroup>
               {presets.some(p => !p.official) && (
                 <optgroup label="我的">
-                  {presets.filter(p => !p.official).map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
+                  {presets.filter(p => !p.official).map(p => {
+                    const effectDesc = describePresetEffect(p)
+                    return (
+                      <option key={p.id} value={p.id}>
+                        {p.name}{effectDesc ? ` · ${effectDesc}` : ''}
+                      </option>
+                    )
+                  })}
                 </optgroup>
               )}
             </select>
@@ -334,14 +363,60 @@ function StylePanel({
             删除
           </button>
         </div>
+        {/* 激活预设效果预览卡片 */}
+        {activePresetId && (() => {
+          const active = presets.find(p => p.id === activePresetId)
+          if (!active) return null
+          const tpl = TEMPLATES.find(t => t.id === active.config.id)
+          const fontLabel = FONT_FAMILIES.find(f => f.key === active.config.fontFamily)?.label || '宋体'
+          return (
+            <div className="mt-2 p-2 rounded-md bg-surface/70 border border-blue-200/50 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-text-2">模板</span>
+                <span className="text-[11px] text-text font-medium">
+                  {tpl?.icon} {tpl?.name}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-text-2">字体</span>
+                <span className="text-[11px] text-text font-medium">{fontLabel}</span>
+              </div>
+              {active.config.customText && (
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-[10px] text-text-2 shrink-0">文字</span>
+                  <span className="text-[10px] text-text font-mono text-right break-all leading-snug">
+                    {active.config.customText}
+                  </span>
+                </div>
+              )}
+              {active.config.shadow && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-text-2">阴影</span>
+                  <span className="text-[10px] text-text">开启</span>
+                </div>
+              )}
+            </div>
+          )
+        })()}
       </section>
 
       {/* ─── 模板（Templates）─── 白色中性 + 竖排网格 */}
       <section className="p-3 md:p-4 rounded-xl border border-border bg-surface">
-        <h3 className="text-[13px] font-semibold text-text mb-3 flex items-center gap-1.5">
-          <span className="text-orange-500">🎨</span>
-          <span>模板</span>
-        </h3>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-[13px] font-semibold text-text flex items-center gap-1.5">
+            <span className="text-orange-500">🎨</span>
+            <span>模板</span>
+            <span
+              title="模板 = 视觉结构（边框/布局/装饰），可叠加右侧参数微调"
+              className="w-3.5 h-3.5 rounded-full bg-orange-100 text-orange-600 text-[9px] font-bold flex items-center justify-center cursor-help">
+              ?
+            </span>
+          </h3>
+          <span className="text-[10px] text-orange-500/70 font-mono font-semibold">{TEMPLATES.length} 个</span>
+        </div>
+        <p className="text-[9px] text-orange-700/70 mb-3 leading-relaxed">
+          仅切换视觉结构 · 右侧参数可继续微调
+        </p>
         <TemplateGrid selectedId={config.id} onSelect={id => onChange({ id } as any)} />
       </section>
 
@@ -608,6 +683,13 @@ function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: 
                     }`}
                   title={t.name + ' · ' + t.desc}>
                   <TemplateThumb id={t.id} selected={selectedId === t.id} />
+                  {/* hover 时显示效果描述浮层 */}
+                  <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1 transition-opacity duration-fast pointer-events-none
+                    ${selectedId === t.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+                    <p className="text-[9px] text-white/90 leading-tight line-clamp-2">
+                      {t.desc}
+                    </p>
+                  </div>
                 </button>
               ))}
             </div>
