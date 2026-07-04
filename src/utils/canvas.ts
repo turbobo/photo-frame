@@ -239,9 +239,8 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
 function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
   const f = makeFontCtx(config, long)
-  const ref = sizeRef(W, H)
   const sidePad = Math.round(long * config.padding / 100)
-  const bottomPad = Math.round(long * config.padding / 100 * 3) // 底部约 3x
+  const bottomPad = Math.round(long * config.padding / 100 * 4) // 底部约 4x（更大空间给签名）
   const spread = config.shadow ? Math.round(long * 0.04 * 0.4) : 0
 
   const canvas = document.createElement('canvas')
@@ -259,13 +258,22 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.drawImage(image, cardX + sidePad, cardY + sidePad, W, H)
 
   // 底部签名文字
-  const fontPx = Math.round(ref * config.fontSize / 100)
+  // 用 long 计算字号（与其他模板一致，避免竖版/横版差异过大）
+  const fontPx = Math.max(24, Math.round(long * config.fontSize / 100))
   c.fillStyle = config.textColor
   c.font = `400 ${fontPx}px ${f.hand}`
   c.textAlign = 'center'
   c.textBaseline = 'middle'
-  const line = resolveCustomText(config.customText, exif.dateTaken || '', exif, config)
-  if (line) c.fillText(line, canvas.width / 2, cardY + sidePad + H + bottomPad / 2)
+  // 优先 customText → exif.dateTaken → 默认 "signature"
+  const line = resolveCustomText(
+    config.customText,
+    exif.dateTaken || 'signature',
+    exif,
+    config,
+  )
+  if (line) {
+    c.fillText(line, canvas.width / 2, cardY + sidePad + H + bottomPad / 2)
+  }
 
   return canvas
 }
