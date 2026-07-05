@@ -683,13 +683,6 @@ function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: 
                     }`}
                   title={t.name + ' · ' + t.desc}>
                   <TemplateThumb id={t.id} selected={selectedId === t.id} />
-                  {/* hover 时显示效果描述浮层 */}
-                  <div className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1 transition-opacity duration-fast pointer-events-none
-                    ${selectedId === t.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
-                    <p className="text-[9px] text-white/90 leading-tight line-clamp-2">
-                      {t.desc}
-                    </p>
-                  </div>
                 </button>
               ))}
             </div>
