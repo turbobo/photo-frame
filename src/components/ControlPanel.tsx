@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import type { PhotoData, TemplateConfig } from '../types'
 import { TEMPLATES, TEMPLATE_GROUPS } from '../templates'
 import { FONT_FAMILIES, TEXT_VARIABLES } from '../utils/fonts'
@@ -32,8 +32,6 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
   // 预设状态
   const [presets, setPresets] = useState<TemplatePreset[]>([])
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
-  const customTextInputRef = useRef<HTMLInputElement>(null)
-
   // 加载预设列表（仅客户端）
   useEffect(() => {
     setPresets(loadPresets())
@@ -70,24 +68,15 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
   }
 
   const handleInsertVariable = (varKey: string) => {
-    const input = customTextInputRef.current
-    if (!input) {
-      // 没有 input 引用，fallback：直接拼接到末尾
-      onChange({ ...config, customText: (config.customText || '') + `{${varKey}}` })
-      return
-    }
-    const start = input.selectionStart ?? config.customText.length
-    const end = input.selectionEnd ?? start
-    const before = (config.customText || '').slice(0, start)
-    const after = (config.customText || '').slice(end)
-    const newText = `${before}{${varKey}}${after}`
-    onChange({ ...config, customText: newText })
-    // 恢复光标位置
-    setTimeout(() => {
-      input.focus()
-      const newPos = start + varKey.length + 2
-      input.setSelectionRange(newPos, newPos)
-    }, 0)
+    const current = config.customText || ''
+    const sep = current && !current.endsWith(' ') ? ' ' : ''
+    onChange({ ...config, customText: current + sep + `{${varKey}}` })
+  }
+
+  const handleRemoveVariable = (index: number) => {
+    const tokens = (config.customText || '').match(/\{[^}]+\}|[^{\s]+/g) || []
+    tokens.splice(index, 1)
+    onChange({ ...config, customText: tokens.join(' ') })
   }
 
   const patch = (p: Partial<TemplateConfig>) => onChange({ ...config, ...p })
@@ -173,7 +162,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
           onDeletePreset={handleDeletePreset}
           onClosePreset={() => setActivePresetId(null)}
           onInsertVariable={handleInsertVariable}
-          customTextInputRef={customTextInputRef}
+          onRemoveVariable={handleRemoveVariable}
         />}
         {tab === 'info'   && <InfoPanel photo={photo} />}
       </div>
@@ -262,7 +251,7 @@ function describePresetEffect(p: TemplatePreset): string {
 function StylePanel({
   config, onChange, quality, setQuality, format,
   presets, activePresetId, onSelectPreset, onSavePreset, onDeletePreset, onClosePreset,
-  onInsertVariable, customTextInputRef,
+  onInsertVariable, onRemoveVariable,
 }: {
   config: TemplateConfig
   onChange: (p: Partial<TemplateConfig>) => void
@@ -276,7 +265,7 @@ function StylePanel({
   onDeletePreset: () => void
   onClosePreset: () => void
   onInsertVariable: (varKey: string) => void
-  customTextInputRef: React.RefObject<HTMLInputElement>
+  onRemoveVariable: (index: number) => void
 }) {
   return (
     <div className="p-4 md:p-6 space-y-5 md:space-y-7">
@@ -498,15 +487,33 @@ function StylePanel({
       <section>
         <div className="flex items-baseline justify-between mb-2">
           <SectionLabel>自定义文字</SectionLabel>
-          <span className="text-[9px] text-text-3">支持 {'{变量}'}</span>
+          <span className="text-[9px] text-text-3">点击下方变量添加</span>
         </div>
-        <input
-          ref={customTextInputRef}
-          type="text"
-          value={config.customText}
-          onChange={e => onChange({ customText: e.target.value })}
-          placeholder="如 {Make} {Model}  {FNumber} {ISO}"
-          className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast font-mono"/>
+        <div className="w-full min-h-[38px] px-2 py-1.5 bg-canvas border border-border rounded-md flex flex-wrap gap-1.5 items-center">
+          {(() => {
+            const tokens = (config.customText || '').match(/\{[^}]+\}|[^{\s]+/g) || []
+            if (tokens.length === 0) return (
+              <span className="text-[11px] text-text-3">暂未添加变量</span>
+            )
+            return tokens.map((token, i) => {
+              const varMatch = token.match(/^\{(.+)\}$/)
+              const varKey = varMatch?.[1]
+              const varDef = varKey ? TEXT_VARIABLES.find(v => v.key === varKey) : null
+              return (
+                <span key={i}
+                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-accent/10 border border-accent/20 text-[11px] text-text font-mono">
+                  {varDef?.icon && <span className="text-[10px]">{varDef.icon}</span>}
+                  <span>{varKey || token}</span>
+                  <button type="button"
+                    onClick={() => onRemoveVariable(i)}
+                    className="ml-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] text-text-3 hover:bg-red-100 hover:text-red-500 transition-colors duration-fast leading-none">
+                    ×
+                  </button>
+                </span>
+              )
+            })
+          })()}
+        </div>
         <p className="text-[9px] text-text-3 mt-1 mb-2 leading-relaxed">
           点击下方按钮插入 EXIF 变量，渲染时自动替换为照片实际信息
         </p>
