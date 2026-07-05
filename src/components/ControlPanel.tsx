@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { PhotoData, TemplateConfig } from '../types'
 import { TEMPLATES, TEMPLATE_GROUPS } from '../templates'
 import { FONT_FAMILIES, TEXT_VARIABLES } from '../utils/fonts'
@@ -7,6 +7,11 @@ import {
   loadPresets, savePreset, deletePreset,
   type TemplatePreset,
 } from '../utils/presets'
+import {
+  runBatchExport, detectDeviceLimit,
+  type BatchProgress,
+} from '../utils/batchExport'
+import BatchProgressModal from './BatchProgressModal'
 
 interface Props {
   photo: PhotoData | null
@@ -20,6 +25,8 @@ interface Props {
 
 type Tab = 'style' | 'info'
 
+const BATCH_ACCEPT = '.jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.orf,.pef,.dng,.rwl,image/*'
+
 export default function ControlPanel({ photo, config, onChange, logo, loading }: Props) {
   const [tab, setTab] = useState<Tab>('style')
 
@@ -28,6 +35,11 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
   const [format, setFormat] = useState('jpeg')
   const [quality, setQuality] = useState(0.92)
   const [busy, setBusy] = useState(false)
+
+  // 批量导出状态
+  const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null)
+  const batchAbortRef = useRef<AbortController | null>(null)
+  const batchInputRef = useRef<HTMLInputElement>(null)
 
   // 预设状态
   const [presets, setPresets] = useState<TemplatePreset[]>([])
@@ -79,6 +91,51 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
     const tokens = parseCustomTextTokens(config.customText)
     tokens.splice(index, 1)
     patch({ customText: tokens.join(' ') })
+  }
+
+  const handleBatchExport = async (files: File[]) => {
+    if (!files.length) return
+    const limit = detectDeviceLimit()
+    const capped = files.slice(0, limit)
+    if (files.length > limit && typeof window !== 'undefined') {
+      window.alert(`当前设备最多支持 ${limit} 张，已自动截取前 ${limit} 张`)
+    }
+
+    const ac = new AbortController()
+    batchAbortRef.current = ac
+    const longEdge = SIZE_OPTIONS.find(o => o.key === size)?.longEdge ?? 0
+
+    setBatchProgress({
+      current: 0, total: capped.length, currentName: '',
+      completedCount: 0, failedCount: 0, startedAt: Date.now(),
+    })
+
+    try {
+      const result = await runBatchExport({
+        files: capped,
+        config,
+        format: format as 'jpeg' | 'png' | 'webp',
+        quality,
+        longEdge,
+        onProgress: setBatchProgress,
+        signal: ac.signal,
+      })
+
+      if (result.failedCount > 0 && typeof window !== 'undefined') {
+        window.alert(
+          `批量导出完成：${result.completedCount} 成功，${result.failedCount} 失败\n` +
+          result.failures.map(f => `• ${f.name}: ${f.reason}`).join('\n')
+        )
+      }
+    } catch (err) {
+      console.error('batch export failed:', err)
+      if (typeof window !== 'undefined') {
+        window.alert(`批量导出失败: ${err instanceof Error ? err.message : String(err)}`)
+      }
+    } finally {
+      setBatchProgress(null)
+      batchAbortRef.current = null
+    }
   }
 
   const handleExport = async () => {
@@ -214,7 +271,46 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
             </>
           )}
         </button>
+
+        {/* 批量导出 */}
+        <input
+          ref={batchInputRef}
+          type="file"
+          multiple
+          accept={BATCH_ACCEPT}
+          className="hidden"
+          onChange={e => {
+            const files = Array.from(e.target.files || [])
+            e.target.value = ''
+            if (files.length > 0) handleBatchExport(files)
+          }}
+        />
+        <button
+          onClick={() => batchInputRef.current?.click()}
+          disabled={busy || !!batchProgress}
+          className="btn-outline w-full py-2 rounded-md text-[12px] font-medium flex items-center justify-center gap-1.5 text-text-2">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="7" width="20" height="14" rx="2"/>
+            <rect x="4" y="4" width="16" height="3" rx="1" opacity="0.5"/>
+            <rect x="6" y="1" width="12" height="3" rx="1" opacity="0.25"/>
+          </svg>
+          批量导出 ZIP
+          <span className="ml-auto text-[10px] text-text-3 font-mono">
+            最多 {detectDeviceLimit()} 张
+          </span>
+        </button>
       </div>
+
+      {/* 批量导出进度浮层 */}
+      {batchProgress && (
+        <BatchProgressModal
+          progress={batchProgress}
+          onCancel={() => {
+            batchAbortRef.current?.abort()
+            setBatchProgress(null)
+          }}
+        />
+      )}
     </div>
   )
 }
