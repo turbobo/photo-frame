@@ -67,19 +67,19 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
     setActivePresetId(null)
   }
 
+  const patch = (p: Partial<TemplateConfig>) => onChange({ ...config, ...p })
+
   const handleInsertVariable = (varKey: string) => {
     const current = config.customText || ''
     const sep = current && !current.endsWith(' ') ? ' ' : ''
-    onChange({ ...config, customText: current + sep + `{${varKey}}` })
+    patch({ customText: current + sep + `{${varKey}}` })
   }
 
   const handleRemoveVariable = (index: number) => {
-    const tokens = (config.customText || '').match(/\{[^}]+\}|[^{\s]+/g) || []
+    const tokens = parseCustomTextTokens(config.customText)
     tokens.splice(index, 1)
-    onChange({ ...config, customText: tokens.join(' ') })
+    patch({ customText: tokens.join(' ') })
   }
-
-  const patch = (p: Partial<TemplateConfig>) => onChange({ ...config, ...p })
 
   const handleExport = async () => {
     if (!photo) return
@@ -245,6 +245,9 @@ function describePresetEffect(p: TemplatePreset): string {
   return parts.join(' · ')
 }
 
+const parseCustomTextTokens = (text: string | undefined): string[] =>
+  (text || '').match(/\{[^}]+\}|[^{\s]+/g) || []
+
 // ═══════════════════════════════════════════════════════
 // Style Tab
 // ═══════════════════════════════════════════════════════
@@ -373,9 +376,17 @@ function StylePanel({
               {active.config.customText && (
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-[10px] text-text-2 shrink-0">文字</span>
-                  <span className="text-[10px] text-text font-mono text-right break-all leading-snug">
-                    {active.config.customText}
-                  </span>
+                  <div className="flex flex-wrap gap-0.5 justify-end">
+                    {parseCustomTextTokens(active.config.customText).map((token, i) => {
+                      const varKey = token.match(/^\{(.+)\}$/)?.[1]
+                      const varDef = varKey ? TEXT_VARIABLES.find(v => v.key === varKey) : null
+                      return (
+                        <span key={i} className="px-1 py-px rounded bg-accent/10 text-[9px] text-text font-mono">
+                          {varDef?.icon ? `${varDef.icon} ${varKey}` : (varKey || token)}
+                        </span>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
               {active.config.shadow && (
@@ -489,47 +500,54 @@ function StylePanel({
           <SectionLabel>自定义文字</SectionLabel>
           <span className="text-[9px] text-text-3">点击下方变量添加</span>
         </div>
-        <div className="w-full min-h-[38px] px-2 py-1.5 bg-canvas border border-border rounded-md flex flex-wrap gap-1.5 items-center">
-          {(() => {
-            const tokens = (config.customText || '').match(/\{[^}]+\}|[^{\s]+/g) || []
-            if (tokens.length === 0) return (
-              <span className="text-[11px] text-text-3">暂未添加变量</span>
-            )
-            return tokens.map((token, i) => {
-              const varMatch = token.match(/^\{(.+)\}$/)
-              const varKey = varMatch?.[1]
-              const varDef = varKey ? TEXT_VARIABLES.find(v => v.key === varKey) : null
-              return (
-                <span key={i}
-                  className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-accent/10 border border-accent/20 text-[11px] text-text font-mono">
-                  {varDef?.icon && <span className="text-[10px]">{varDef.icon}</span>}
-                  <span>{varKey || token}</span>
-                  <button type="button"
-                    onClick={() => onRemoveVariable(i)}
-                    className="ml-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] text-text-3 hover:bg-red-100 hover:text-red-500 transition-colors duration-fast leading-none">
-                    ×
+        {(() => {
+          const tokens = parseCustomTextTokens(config.customText)
+          const addedKeys = new Set(tokens.map(t => t.match(/^\{(.+)\}$/)?.[1]).filter(Boolean))
+          return (<>
+            <div className="w-full min-h-[38px] px-2 py-1.5 bg-canvas border border-border rounded-md flex flex-wrap gap-1.5 items-center">
+              {tokens.length === 0
+                ? <span className="text-[11px] text-text-3">暂未添加变量</span>
+                : tokens.map((token, i) => {
+                    const varKey = token.match(/^\{(.+)\}$/)?.[1]
+                    const varDef = varKey ? TEXT_VARIABLES.find(v => v.key === varKey) : null
+                    return (
+                      <span key={`${token}-${i}`}
+                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-accent/10 border border-accent/20 text-[11px] text-text font-mono">
+                        {varDef?.icon && <span className="text-[10px]">{varDef.icon}</span>}
+                        <span>{varKey || token}</span>
+                        <button type="button"
+                          onClick={() => onRemoveVariable(i)}
+                          className="ml-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] text-text-3 hover:bg-red-100 hover:text-red-500 transition-colors duration-fast leading-none">
+                          ×
+                        </button>
+                      </span>
+                    )
+                  })
+              }
+            </div>
+            <p className="text-[9px] text-text-3 mt-1 mb-2 leading-relaxed">
+              渲染时自动替换为照片实际 EXIF 信息
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {TEXT_VARIABLES.map(v => {
+                const added = addedKeys.has(v.key)
+                return (
+                  <button
+                    key={v.key}
+                    onClick={() => onInsertVariable(v.key)}
+                    title={`${added ? '再次插入' : '插入'} {${v.key}}（示例：${v.sample}）`}
+                    className={`px-1.5 py-1 text-[10px] rounded border transition-colors duration-fast
+                      ${added
+                        ? 'border-accent/30 bg-accent/5 text-accent'
+                        : 'border-border bg-surface text-text-2 hover:border-accent hover:bg-canvas-soft hover:text-text'}`}>
+                    <span className="mr-0.5">{v.icon}</span>
+                    <span>{v.label}</span>
                   </button>
-                </span>
-              )
-            })
-          })()}
-        </div>
-        <p className="text-[9px] text-text-3 mt-1 mb-2 leading-relaxed">
-          点击下方按钮插入 EXIF 变量，渲染时自动替换为照片实际信息
-        </p>
-        {/* 变量插入按钮组 */}
-        <div className="flex flex-wrap gap-1">
-          {TEXT_VARIABLES.map(v => (
-            <button
-              key={v.key}
-              onClick={() => onInsertVariable(v.key)}
-              title={`插入 {${v.key}}（示例：${v.sample}）`}
-              className="px-1.5 py-1 text-[10px] rounded border border-border bg-surface hover:border-accent hover:bg-canvas-soft transition-colors duration-fast text-text-2 hover:text-text">
-              <span className="mr-0.5">{v.icon}</span>
-              <span>{v.label}</span>
-            </button>
-          ))}
-        </div>
+                )
+              })}
+            </div>
+          </>)
+        })()}
       </section>
 
       {/* Location (only for location template) */}
@@ -683,13 +701,13 @@ function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: 
                 <button
                   key={t.id}
                   onClick={() => onSelect(t.id)}
-                  className={`relative rounded-lg border transition-all duration-fast group overflow-hidden
+                  className={`rounded-lg border transition-all duration-fast overflow-hidden
                     ${selectedId === t.id
                       ? 'border-accent bg-surface shadow-card ring-2 ring-accent/10'
                       : 'border-border bg-surface hover:border-text-3 hover:shadow-card'
                     }`}
                   title={t.name + ' · ' + t.desc}>
-                  <TemplateThumb id={t.id} selected={selectedId === t.id} />
+                  <TemplateThumb id={t.id} name={t.name} desc={t.desc} selected={selectedId === t.id} />
                 </button>
               ))}
             </div>
@@ -701,42 +719,18 @@ function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: 
 }
 
 // Template thumbnail — larger preview area + embedded name + hint
-function TemplateThumb({ id, selected }: { id: string; selected: boolean }) {
-  const meta: Record<string, { name: string; hint: string }> = {
-    minimal:      { name: '极简',     hint: '白/黑边 + 底部小字' },
-    polaroid:     { name: '拍立得',   hint: '经典上下等宽白边' },
-    'light-shadow': { name: '光影',   hint: '底部纯黑薄条 + 单行 EXIF' },
-    'frameless-rounded': { name: '无框圆角', hint: '圆角图片 + 悬浮阴影 + 居中 EXIF' },
-    'white-border': { name: '白色边框', hint: '经典相框 + 左右两栏 EXIF' },
-    'ps-splash': { name: 'PS 启动窗', hint: '模拟 Photoshop 启动界面' },
-    'lr-splash': { name: 'LR 启动窗', hint: '模拟 Lightroom 启动界面' },
-    film:     { name: '胶片',     hint: '黑框齿孔 + 编号' },
-    exif:     { name: '参数栏',   hint: 'Logo + 光圈快门 ISO' },
-    insta:    { name: '社交卡片', hint: '毛玻璃 + 圆角 + 阴影' },
-    leica:    { name: '徕卡栏',   hint: '底部黑栏 + 红点 + 型号' },
-    'red-dot':{ name: '红点水印', hint: '右下角悬浮红点 + 参数' },
-    dazz:     { name: 'Dazz 胶卷',hint: '135 胶卷边框 + 日期印字' },
-    instax:   { name: 'Instax',   hint: '真实拍立得比例 + 大留白' },
-    xhs:      { name: '小红书',   hint: '3:4 白底卡片 + 标题描述' },
-    vintage:  { name: '复古纸相框', hint: '牛皮纸纹理 + 做旧边' },
-    magazine: { name: '杂志封面', hint: '顶部大标题 + 底部 caption' },
-    location: { name: '地理水印', hint: 'Logo + 型号 + 📍地名' },
-  }
-  const m = meta[id] || { name: id, hint: '' }
-
+function TemplateThumb({ id, name, desc, selected }: { id: string; name: string; desc: string; selected: boolean }) {
   return (
     <div className="flex flex-col">
-      {/* Preview area (4:3 aspect) */}
       <div className="aspect-[4/3] w-full relative flex items-center justify-center bg-canvas-soft">
         <TemplatePreview id={id} />
       </div>
-      {/* Name + hint */}
       <div className="px-2 py-1.5 bg-surface">
         <div className={`text-[11px] font-medium truncate ${selected ? 'text-text' : 'text-text-2'}`}>
-          {m.name}
+          {name}
         </div>
         <div className="text-[9px] text-text-3 truncate leading-tight">
-          {m.hint}
+          {desc}
         </div>
       </div>
     </div>
