@@ -30,32 +30,31 @@ export default function BatchProgressModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4">
-      <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-[380px] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
+      <div className="bg-surface rounded-xl shadow-elev border border-border w-full max-w-[360px] overflow-hidden">
         {/* 头部：标题 + 当前文件 */}
         <div className="px-5 pt-5 pb-4 border-b border-border">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {!isComplete && (
-                <div className="w-4 h-4 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+                <div className="w-3.5 h-3.5 rounded-full border-[1.5px] border-text border-t-transparent animate-spin" />
               )}
               {isComplete && failedCount === 0 && (
-                <div className="w-5 h-5 rounded-full bg-green-500 flex items-center justify-center">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 </div>
               )}
               {isComplete && failedCount > 0 && (
-                <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                    <line x1="12" y1="9" x2="12" y2="13" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="8" x2="12" y2="13" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
                   </svg>
                 </div>
               )}
-              <h3 className="text-[15px] font-semibold text-text">
+              <h3 className="text-[14px] font-semibold text-text">
                 {isComplete
                   ? failedCount === 0
                     ? '导出完成'
@@ -63,7 +62,7 @@ export default function BatchProgressModal({
                   : '批量导出中'}
               </h3>
             </div>
-            <span className="text-[24px] font-bold text-accent tabular-nums">
+            <span className="text-[20px] font-semibold text-text tabular-nums">
               {pct}%
             </span>
           </div>
@@ -76,29 +75,31 @@ export default function BatchProgressModal({
 
         {/* 进度条 */}
         <div className="px-5 py-4">
-          <div className="w-full bg-border rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
             <div
               className={`h-full rounded-full transition-[width] duration-300 ease-out ${
                 isComplete
                   ? failedCount === 0
                     ? 'bg-green-500'
                     : 'bg-amber-500'
-                  : 'bg-accent'
+                  : 'bg-text'
               }`}
               style={{ width: `${pct}%` }}
             />
           </div>
           <div className="flex items-center justify-between mt-2">
-            <span className="text-[12px] text-text font-mono tabular-nums font-medium">
+            <span className="text-[11px] text-text-2 font-mono tabular-nums">
               {done} / {total}
             </span>
             {eta && !isComplete && (
-              <span className="text-[11px] text-text-3">
+              <span className="text-[10px] text-text-3">
                 剩余 {eta}
               </span>
             )}
             {isComplete && (
-              <span className="text-[11px] text-green-600 font-medium">
+              <span className={`text-[10px] font-medium ${
+                failedCount === 0 ? 'text-green-600' : 'text-amber-600'
+              }`}>
                 {failedCount === 0 ? '全部成功' : `${completedCount} 成功 · ${failedCount} 失败`}
               </span>
             )}
@@ -106,7 +107,7 @@ export default function BatchProgressModal({
         </div>
 
         {/* 导出摘要 */}
-        <div className="px-5 pb-4 space-y-2">
+        <div className="px-5 pb-4">
           <div className="bg-canvas rounded-lg p-3 space-y-1.5">
             {templateName && (
               <div className="flex items-center justify-between text-[11px]">
@@ -146,9 +147,9 @@ export default function BatchProgressModal({
         <div className="px-5 pb-5">
           <button
             onClick={onCancel}
-            className={`w-full py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
+            className={`w-full py-2 rounded-lg text-[12px] font-medium transition-colors ${
               isComplete
-                ? 'bg-accent text-white hover:bg-accent-hover'
+                ? 'bg-text text-white hover:bg-text/90'
                 : 'btn-outline'
             }`}>
             {isComplete ? '关闭' : '取消导出'}

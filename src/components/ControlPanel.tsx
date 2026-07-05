@@ -285,33 +285,25 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
             if (files.length > 0) handleBatchExport(files)
           }}
         />
-        <div className="bg-canvas rounded-lg p-3 space-y-2.5">
-          {/* 预览提示 */}
-          {photo && (
-            <div className="flex items-center gap-2 text-[10px] text-text-2">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="8" x2="12" y2="12"/>
-                <line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
-              <span>先用当前照片预览模板效果，再批量导出</span>
-            </div>
-          )}
-          <button
-            onClick={() => batchInputRef.current?.click()}
-            disabled={busy || !!batchProgress}
-            className="w-full py-2.5 rounded-lg bg-gradient-to-r from-sky-500 to-indigo-500 text-white text-[13px] font-semibold flex items-center justify-center gap-2 hover:from-sky-600 hover:to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="7" width="20" height="14" rx="2"/>
-              <rect x="4" y="4" width="16" height="3" rx="1" opacity="0.5"/>
-              <rect x="6" y="1" width="12" height="3" rx="1" opacity="0.25"/>
-            </svg>
-            批量导出 ZIP
-            <span className="ml-auto text-[10px] text-white/70 font-mono">
-              ≤ {detectDeviceLimit()} 张
-            </span>
-          </button>
-        </div>
+        <button
+          onClick={() => batchInputRef.current?.click()}
+          disabled={busy || !!batchProgress}
+          className="btn-outline w-full py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="7" width="20" height="14" rx="2"/>
+            <rect x="4" y="4" width="16" height="3" rx="1" opacity="0.5"/>
+            <rect x="6" y="1" width="12" height="3" rx="1" opacity="0.25"/>
+          </svg>
+          批量导出 ZIP
+          <span className="ml-auto text-[10px] text-text-3 font-mono">
+            ≤ {detectDeviceLimit()} 张
+          </span>
+        </button>
+        {photo && (
+          <p className="text-[10px] text-text-3 text-center mt-2">
+            提示：建议先用当前照片预览模板效果
+          </p>
+        )}
       </div>
 
       {/* 批量导出进度浮层 */}
