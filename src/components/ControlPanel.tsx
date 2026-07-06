@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import type { PhotoData, TemplateConfig } from '../types'
-import { TEMPLATES, TEMPLATE_GROUPS } from '../templates'
+import { TEMPLATES, TEMPLATE_GROUPS, getDefaultConfig } from '../templates'
 import { FONT_FAMILIES, TEXT_VARIABLES } from '../utils/fonts'
 import { renderFrame } from '../utils/canvas'
 import {
@@ -659,7 +659,20 @@ function StylePanel({
         <p className="text-[9px] text-text-3 mb-3 leading-relaxed">
           仅切换视觉结构 · 右侧参数可继续微调
         </p>
-        <TemplateGrid selectedId={config.id} onSelect={id => onChange({ id } as any)} />
+        <TemplateGrid selectedId={config.id} onSelect={id => {
+          const defaults = getDefaultConfig(id as TemplateConfig['id'])
+          onChange({
+            ...defaults,
+            // 保留用户自定义设置（不随模板切换重置）
+            customText: config.customText,
+            watermarkText: config.watermarkText,
+            showLogo: config.showLogo,
+            showExif: config.showExif,
+            fontFamily: config.fontFamily,
+            locationName: config.locationName,
+            copyright: config.copyright,
+          })
+        }} />
       </section>
 
       {/* Dimensions */}
