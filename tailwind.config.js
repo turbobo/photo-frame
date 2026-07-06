@@ -13,7 +13,7 @@ export default {
         // 文字层级
         text:           '#1c1917',            // 主文字
         'text-2':       '#78716c',            // 次文字
-        'text-3':       '#a8a29e',            // 弱文字 / caption
+        'text-3':       '#6d6b68',            // 弱文字 / caption（WCAG AA 4.5:1+）
         // 强调色（统一中性黑）
         accent:         '#18181b',
         'accent-hover': '#27272a',

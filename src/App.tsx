@@ -89,7 +89,7 @@ export default function App() {
       {/* ─────── Main: Preview + Control Panel ─────── */}
       <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
         {/* Preview Area */}
-        <main className="h-[60vh] md:h-auto md:flex-1 flex flex-col overflow-hidden relative bg-canvas">
+        <main className="min-h-[200px] flex-1 md:h-auto md:flex-1 flex flex-col overflow-hidden relative bg-canvas">
           {photo ? (
             <>
               <div className="flex-1 overflow-hidden">

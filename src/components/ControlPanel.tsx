@@ -27,6 +27,77 @@ type Tab = 'style' | 'info'
 
 const BATCH_ACCEPT = '.jpg,.jpeg,.png,.webp,.avif,.heic,.heif,.cr2,.cr3,.nef,.arw,.raf,.rw2,.orf,.pef,.dng,.rwl,image/*'
 
+// ═══════════════════════════════════════════════════════
+// SVG Icons (replacing emoji for cross-platform consistency)
+// ═══════════════════════════════════════════════════════
+function IconPreset({ className = '' }: { className?: string }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+      <polyline points="17 21 17 13 7 13 7 21"/>
+      <polyline points="7 3 7 8 15 8"/>
+    </svg>
+  )
+}
+
+function IconTemplate({ className = '' }: { className?: string }) {
+  return (
+    <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <path d="M3 9h18"/>
+      <path d="M9 21V9"/>
+    </svg>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
+// Inline Dialog (replaces window.prompt / window.confirm)
+// ═══════════════════════════════════════════════════════
+function InlineDialog({ title, children, onClose }: {
+  title: string
+  children: React.ReactNode
+  onClose: () => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={onClose}>
+      <div className="bg-surface rounded-xl shadow-elev border border-border w-full max-w-[320px] overflow-hidden" onClick={e => e.stopPropagation()}>
+        <div className="px-5 pt-4 pb-3 border-b border-border">
+          <h3 className="text-[14px] font-semibold text-text">{title}</h3>
+        </div>
+        <div className="px-5 py-4">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
+// Toast notification (replaces window.alert)
+// ═══════════════════════════════════════════════════════
+function Toast({ message, type = 'info', onClose }: {
+  message: string
+  type?: 'info' | 'error' | 'success'
+  onClose: () => void
+}) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 4000)
+    return () => clearTimeout(t)
+  }, [onClose])
+
+  const colors = {
+    info: 'bg-accent text-white',
+    error: 'bg-red-600 text-white',
+    success: 'bg-green-600 text-white',
+  }
+
+  return (
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 fade-in" role="alert" aria-live="polite">
+      <div className={`${colors[type]} px-4 py-2.5 rounded-lg shadow-elev text-[12px] font-medium max-w-[320px]`}>
+        {message}
+      </div>
+    </div>
+  )
+}
+
 export default function ControlPanel({ photo, config, onChange, logo, loading }: Props) {
   const [tab, setTab] = useState<Tab>('style')
 
@@ -44,10 +115,25 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
   // 预设状态
   const [presets, setPresets] = useState<TemplatePreset[]>([])
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
-  // 加载预设列表（仅客户端）
+
+  // 内联对话框状态
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [savePresetName, setSavePresetName] = useState('')
+  const saveInputRef = useRef<HTMLInputElement>(null)
+
+  // Toast 状态
+  const [toast, setToast] = useState<{ message: string; type: 'info' | 'error' | 'success' } | null>(null)
+
   useEffect(() => {
     setPresets(loadPresets())
   }, [])
+
+  useEffect(() => {
+    if (showSaveDialog && saveInputRef.current) {
+      saveInputRef.current.focus()
+    }
+  }, [showSaveDialog])
 
   const handleSelectPreset = (preset: TemplatePreset) => {
     onChange(preset.config)
@@ -55,12 +141,18 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
   }
 
   const handleSavePreset = () => {
-    if (typeof window === 'undefined') return
-    const name = window.prompt('保存预设名称', `我的预设 ${presets.filter(p => !p.official).length + 1}`)
-    if (!name?.trim()) return
-    const newPreset = savePreset(name.trim(), config)
+    setSavePresetName(`我的预设 ${presets.filter(p => !p.official).length + 1}`)
+    setShowSaveDialog(true)
+  }
+
+  const handleConfirmSave = () => {
+    const name = savePresetName.trim()
+    if (!name) return
+    const newPreset = savePreset(name, config)
     setPresets(loadPresets())
     setActivePresetId(newPreset.id)
+    setShowSaveDialog(false)
+    setToast({ message: `预设「${name}」已保存`, type: 'success' })
   }
 
   const handleDeletePreset = () => {
@@ -68,15 +160,19 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
     const preset = presets.find(p => p.id === activePresetId)
     if (!preset) return
     if (preset.official) {
-      if (typeof window !== 'undefined') {
-        window.alert('官方预设不可删除')
-      }
+      setToast({ message: '官方预设不可删除', type: 'info' })
       return
     }
-    if (typeof window !== 'undefined' && !window.confirm(`删除预设「${preset.name}」？`)) return
-    deletePreset(activePresetId)
+    setShowDeleteDialog(true)
+  }
+
+  const handleConfirmDelete = () => {
+    const preset = presets.find(p => p.id === activePresetId)
+    deletePreset(activePresetId!)
     setPresets(loadPresets())
     setActivePresetId(null)
+    setShowDeleteDialog(false)
+    setToast({ message: `预设「${preset?.name}」已删除`, type: 'info' })
   }
 
   const patch = (p: Partial<TemplateConfig>) => onChange({ ...config, ...p })
@@ -97,8 +193,8 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
     if (!files.length) return
     const limit = detectDeviceLimit()
     const capped = files.slice(0, limit)
-    if (files.length > limit && typeof window !== 'undefined') {
-      window.alert(`当前设备最多支持 ${limit} 张，已自动截取前 ${limit} 张`)
+    if (files.length > limit) {
+      setToast({ message: `当前设备最多支持 ${limit} 张，已自动截取前 ${limit} 张`, type: 'info' })
     }
 
     const ac = new AbortController()
@@ -121,17 +217,18 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
         signal: ac.signal,
       })
 
-      if (result.failedCount > 0 && typeof window !== 'undefined') {
-        window.alert(
-          `批量导出完成：${result.completedCount} 成功，${result.failedCount} 失败\n` +
-          result.failures.map(f => `• ${f.name}: ${f.reason}`).join('\n')
-        )
+      if (result.failedCount > 0) {
+        setToast({
+          message: `批量导出完成：${result.completedCount} 成功，${result.failedCount} 失败`,
+          type: 'error',
+        })
       }
     } catch (err) {
       console.error('batch export failed:', err)
-      if (typeof window !== 'undefined') {
-        window.alert(`批量导出失败: ${err instanceof Error ? err.message : String(err)}`)
-      }
+      setToast({
+        message: `批量导出失败: ${err instanceof Error ? err.message : String(err)}`,
+        type: 'error',
+      })
     } finally {
       setBatchProgress(null)
       batchAbortRef.current = null
@@ -159,9 +256,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
       const mime = FORMATS.find(f => f.key === format)!.mime
       const blob = await new Promise<Blob | null>(r => target.toBlob(r, mime, quality))
       if (!blob) {
-        if (typeof window !== 'undefined') {
-          window.alert('生成图片失败，请重试')
-        }
+        setToast({ message: '生成图片失败，请重试', type: 'error' })
         return
       }
       const url = URL.createObjectURL(blob)
@@ -172,23 +267,21 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
       a.download = `${base}-${config.id}.${ext}`
       a.style.display = 'none'
       document.body.appendChild(a)
-      // 使用 dispatchEvent + MouseEvent 代替 HTMLElement.click()
-      // 兼容性更好，Chrome 120+ 不会静默阻止
       a.dispatchEvent(new MouseEvent('click', {
         view: window,
         bubbles: true,
         cancelable: true,
       }))
-      // 下载触发后立即清理，避免内存泄漏和重复下载
       setTimeout(() => {
         try { document.body.removeChild(a) } catch {}
         URL.revokeObjectURL(url)
       }, 100)
     } catch (err) {
       console.error('handleExport failed:', err)
-      if (typeof window !== 'undefined') {
-        window.alert(`下载失败: ${err instanceof Error ? err.message : String(err)}`)
-      }
+      setToast({
+        message: `下载失败: ${err instanceof Error ? err.message : String(err)}`,
+        type: 'error',
+      })
     } finally {
       setBusy(false)
     }
@@ -197,15 +290,15 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
   return (
     <div className="flex flex-col md:h-full">
       {/* Tabs */}
-      <div className="px-4 md:px-6 pt-4 md:pt-5 pb-3 md:pb-4 border-b border-border shrink-0">
-        <div className="segment w-full">
-          <button data-active={tab === 'style'} onClick={() => setTab('style')}>样式</button>
-          <button data-active={tab === 'info'}  onClick={() => setTab('info')}>信息</button>
+      <div className="px-5 pt-4 md:pt-5 pb-3 md:pb-4 border-b border-border shrink-0">
+        <div className="segment w-full" role="tablist" aria-label="控制面板">
+          <button role="tab" aria-selected={tab === 'style'} data-active={tab === 'style'} onClick={() => setTab('style')}>样式</button>
+          <button role="tab" aria-selected={tab === 'info'} data-active={tab === 'info'} onClick={() => setTab('info')}>信息</button>
         </div>
       </div>
 
       {/* Content */}
-      <div className="md:flex-1 md:overflow-y-auto">
+      <div className="md:flex-1 md:overflow-y-auto" role="tabpanel">
         {tab === 'style' && <StylePanel
           config={config}
           onChange={patch}
@@ -225,13 +318,13 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
       </div>
 
       {/* ─── 常驻导出栏（sticky footer）─── */}
-      <div className="shrink-0 border-t border-border bg-surface px-4 md:px-5 py-3 md:py-4 space-y-3">
+      <div className="shrink-0 border-t border-border bg-surface px-5 py-3 md:py-4 space-y-3">
         {/* 格式 */}
         <div className="flex items-center gap-2">
           <span className="font-caption text-text-3 w-10 shrink-0">格式</span>
-          <div className="segment flex-1">
+          <div className="segment flex-1" role="radiogroup" aria-label="导出格式">
             {FORMATS.map(f => (
-              <button key={f.key} data-active={format === f.key}
+              <button key={f.key} role="radio" aria-checked={format === f.key} data-active={format === f.key}
                 onClick={() => setFormat(f.key)}
                 className="flex-1">{f.label}</button>
             ))}
@@ -241,9 +334,9 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
         {/* 尺寸 */}
         <div className="flex items-center gap-2">
           <span className="font-caption text-text-3 w-10 shrink-0">尺寸</span>
-          <div className="segment flex-1">
+          <div className="segment flex-1" role="radiogroup" aria-label="导出尺寸">
             {SIZE_OPTIONS.map(o => (
-              <button key={o.key} data-active={size === o.key}
+              <button key={o.key} role="radio" aria-checked={size === o.key} data-active={size === o.key}
                 onClick={() => setSize(o.key)}
                 className="flex-1">{o.label}</button>
             ))}
@@ -319,6 +412,41 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
           quality={quality}
         />
       )}
+
+      {/* 保存预设对话框 */}
+      {showSaveDialog && (
+        <InlineDialog title="保存预设" onClose={() => setShowSaveDialog(false)}>
+          <input
+            ref={saveInputRef}
+            type="text"
+            value={savePresetName}
+            onChange={e => setSavePresetName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleConfirmSave() }}
+            placeholder="预设名称"
+            className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[13px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast mb-3"
+          />
+          <div className="flex gap-2">
+            <button onClick={() => setShowSaveDialog(false)} className="btn-outline flex-1 py-2 rounded-md text-[12px]">取消</button>
+            <button onClick={handleConfirmSave} className="btn-primary flex-1 py-2 rounded-md text-[12px]">保存</button>
+          </div>
+        </InlineDialog>
+      )}
+
+      {/* 删除预设确认 */}
+      {showDeleteDialog && (
+        <InlineDialog title="删除预设" onClose={() => setShowDeleteDialog(false)}>
+          <p className="text-[12px] text-text-2 mb-4">
+            确定删除预设「{presets.find(p => p.id === activePresetId)?.name}」？此操作不可撤销。
+          </p>
+          <div className="flex gap-2">
+            <button onClick={() => setShowDeleteDialog(false)} className="btn-outline flex-1 py-2 rounded-md text-[12px]">取消</button>
+            <button onClick={handleConfirmDelete} className="flex-1 py-2 rounded-md text-[12px] bg-red-600 text-white hover:bg-red-700 transition-colors">删除</button>
+          </div>
+        </InlineDialog>
+      )}
+
+      {/* Toast */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   )
 }
@@ -338,7 +466,6 @@ const FORMATS = [
   { key: 'webp', label: 'WebP', mime: 'image/webp' },
 ]
 
-/** 根据预设配置生成简短效果描述（用于下拉选项） */
 function describePresetEffect(p: TemplatePreset): string {
   const tpl = TEMPLATES.find(t => t.id === p.config.id)
   if (!tpl) return ''
@@ -351,6 +478,21 @@ function describePresetEffect(p: TemplatePreset): string {
 
 const parseCustomTextTokens = (text: string | undefined): string[] =>
   (text || '').match(/\{[^}]+\}|[^{\s]+/g) || []
+
+// ═══════════════════════════════════════════════════════
+// Color name map (for aria-label on color swatches)
+// ═══════════════════════════════════════════════════════
+const COLOR_NAMES: Record<string, string> = {
+  '#ffffff': '白色', '#fafaf9': '米白', '#f5f5f4': '浅灰',
+  '#d4b896': '牛皮色', '#a8a39d': '暖灰', '#44403c': '深灰',
+  '#1c1917': '墨色', '#18181b': '黑色',
+  '#ff3d00': '橙红', '#ff6b35': '橙色', '#ffcc00': '黄色',
+  '#00ff88': '绿色', '#00aaff': '蓝色', '#ff00aa': '粉红',
+}
+
+function getColorName(hex: string): string {
+  return COLOR_NAMES[hex.toLowerCase()] || hex
+}
 
 // ═══════════════════════════════════════════════════════
 // Style Tab
@@ -375,25 +517,24 @@ function StylePanel({
   onRemoveVariable: (index: number) => void
 }) {
   return (
-    <div className="p-4 md:p-6 space-y-5 md:space-y-7">
-      {/* ─── 预设（Presets）─── 浅蓝强调 + 水平布局 */}
-      <section className="p-3 md:p-4 rounded-xl border border-blue-200 bg-blue-50/50">
+    <div className="p-5 space-y-5 md:space-y-7">
+      {/* ─── 预设（Presets）─── 中性风格 */}
+      <section className="p-3 md:p-4 rounded-xl border border-border bg-canvas-soft">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-[13px] font-semibold text-text flex items-center gap-1.5">
-            <span className="text-blue-500">💾</span>
+            <IconPreset className="text-text-2" />
             <span>预设</span>
             <span
               title="预设 = 一键应用整套配置（模板 + 字体 + 文字 + 颜色），保存后可复用"
-              className="w-3.5 h-3.5 rounded-full bg-blue-100 text-blue-600 text-[9px] font-bold flex items-center justify-center cursor-help">
+              className="w-3.5 h-3.5 rounded-full bg-canvas text-text-3 text-[9px] font-bold flex items-center justify-center cursor-help border border-border">
               ?
             </span>
           </h3>
-          <span className="text-[10px] text-blue-500/70 font-mono font-semibold">{presets.length} 个</span>
+          <span className="text-[10px] text-text-3 font-mono font-semibold">{presets.length} 个</span>
         </div>
-        <p className="text-[9px] text-blue-700/70 mb-2 leading-relaxed">
+        <p className="text-[9px] text-text-3 mb-2 leading-relaxed">
           一键应用整套配置 · 微调后可另存为新预设
         </p>
-        {/* 水平布局：下拉（含关闭按钮） + 保存 + 删除 */}
         <div className="flex gap-1.5 items-stretch">
           <div className="relative flex-1 min-w-0">
             <select
@@ -401,14 +542,14 @@ function StylePanel({
               onChange={e => {
                 const id = e.target.value
                 if (!id) {
-                  // 选择 placeholder 时关闭预设高亮（不改 config）
                   onClosePreset()
                   return
                 }
                 const preset = presets.find(p => p.id === id)
                 if (preset) onSelectPreset(preset)
               }}
-              className="w-full px-2 py-1.5 pr-7 bg-surface border border-blue-200 rounded-md text-[11px] text-text outline-none focus:border-blue-400 transition-colors duration-fast"
+              aria-label="选择预设"
+              className="w-full px-2 py-1.5 pr-7 bg-surface border border-border rounded-md text-[11px] text-text outline-none focus:border-accent transition-colors duration-fast"
             >
               <option value="">— 选择 —</option>
               <optgroup label="官方">
@@ -434,13 +575,13 @@ function StylePanel({
                 </optgroup>
               )}
             </select>
-            {/* 关闭预设按钮：仅在有激活预设时显示 */}
             {activePresetId && (
               <button
                 type="button"
                 onClick={() => onClosePreset()}
                 title="关闭预设高亮（不改当前配置）"
-                className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center text-[10px] font-bold leading-none transition-colors duration-fast">
+                aria-label="关闭预设"
+                className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-canvas hover:bg-border text-text-3 flex items-center justify-center text-[10px] font-bold leading-none transition-colors duration-fast">
                 ×
               </button>
             )}
@@ -448,30 +589,27 @@ function StylePanel({
           <button
             onClick={onSavePreset}
             title="保存当前配置为预设"
-            className="px-2 py-1.5 text-[11px] rounded-md bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-fast whitespace-nowrap">
+            className="btn-primary px-2.5 py-1.5 text-[11px] rounded-md whitespace-nowrap">
             + 保存
           </button>
           <button
             onClick={onDeletePreset}
             disabled={!activePresetId}
             title="删除所选预设"
-            className="px-2 py-1.5 text-[11px] rounded-md border border-blue-200 text-text-2 hover:border-red-400 hover:text-red-500 transition-colors duration-fast disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
+            className="btn-outline px-2.5 py-1.5 text-[11px] rounded-md hover:border-red-400 hover:text-red-500 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap">
             删除
           </button>
         </div>
-        {/* 激活预设效果预览卡片 */}
         {activePresetId && (() => {
           const active = presets.find(p => p.id === activePresetId)
           if (!active) return null
           const tpl = TEMPLATES.find(t => t.id === active.config.id)
           const fontLabel = FONT_FAMILIES.find(f => f.key === active.config.fontFamily)?.label || '宋体'
           return (
-            <div className="mt-2 p-2 rounded-md bg-surface/70 border border-blue-200/50 space-y-1">
+            <div className="mt-2 p-2 rounded-md bg-surface border border-border space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-text-2">模板</span>
-                <span className="text-[11px] text-text font-medium">
-                  {tpl?.icon} {tpl?.name}
-                </span>
+                <span className="text-[11px] text-text font-medium">{tpl?.name}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-text-2">字体</span>
@@ -486,7 +624,7 @@ function StylePanel({
                       const varDef = varKey ? TEXT_VARIABLES.find(v => v.key === varKey) : null
                       return (
                         <span key={i} className="px-1 py-px rounded bg-accent/10 text-[9px] text-text font-mono">
-                          {varDef?.icon ? `${varDef.icon} ${varDef.label}` : (varKey || token)}
+                          {varDef?.label || varKey || token}
                         </span>
                       )
                     })}
@@ -504,21 +642,21 @@ function StylePanel({
         })()}
       </section>
 
-      {/* ─── 模板（Templates）─── 白色中性 + 竖排网格 */}
+      {/* ─── 模板（Templates）─── */}
       <section className="p-3 md:p-4 rounded-xl border border-border bg-surface">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-[13px] font-semibold text-text flex items-center gap-1.5">
-            <span className="text-orange-500">🎨</span>
+            <IconTemplate className="text-text-2" />
             <span>模板</span>
             <span
               title="模板 = 视觉结构（边框/布局/装饰），可叠加右侧参数微调"
-              className="w-3.5 h-3.5 rounded-full bg-orange-100 text-orange-600 text-[9px] font-bold flex items-center justify-center cursor-help">
+              className="w-3.5 h-3.5 rounded-full bg-canvas text-text-3 text-[9px] font-bold flex items-center justify-center cursor-help border border-border">
               ?
             </span>
           </h3>
-          <span className="text-[10px] text-orange-500/70 font-mono font-semibold">{TEMPLATES.length} 个</span>
+          <span className="text-[10px] text-text-3 font-mono font-semibold">{TEMPLATES.length} 个</span>
         </div>
-        <p className="text-[9px] text-orange-700/70 mb-3 leading-relaxed">
+        <p className="text-[9px] text-text-3 mb-3 leading-relaxed">
           仅切换视觉结构 · 右侧参数可继续微调
         </p>
         <TemplateGrid selectedId={config.id} onSelect={id => onChange({ id } as any)} />
@@ -551,10 +689,9 @@ function StylePanel({
           <SectionLabel>字体</SectionLabel>
           <span className="text-[9px] text-text-3">影响所有文字</span>
         </div>
-        <div className="grid grid-cols-5 gap-1.5">
+        <div className="grid grid-cols-5 gap-1.5" role="radiogroup" aria-label="字体选择">
           {FONT_FAMILIES.map(f => {
             const isActive = (config.fontFamily || 'noto-serif') === f.key
-            // 预览文本：汉字 + 字母 + 数字，体现字体风格差异
             const sample = f.key === 'jetbrains' ? 'F/2.8'
               : f.key === 'wenkai' ? '签名'
               : f.key === 'noto-serif' ? '宋 Aa'
@@ -562,6 +699,9 @@ function StylePanel({
               : 'Aa 1'
             return (
               <button key={f.key}
+                role="radio"
+                aria-checked={isActive}
+                aria-label={f.label}
                 onClick={() => onChange({ fontFamily: f.key })}
                 className={`py-1.5 rounded-md text-center border transition-all duration-fast
                   ${isActive
@@ -617,10 +757,10 @@ function StylePanel({
                     return (
                       <span key={`${token}-${i}`}
                         className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-accent/10 border border-accent/20 text-[11px] text-text font-mono">
-                        {varDef?.icon && <span className="text-[10px]">{varDef.icon}</span>}
                         <span>{varDef?.label || varKey || token}</span>
                         <button type="button"
                           onClick={() => onRemoveVariable(i)}
+                          aria-label={`移除 ${varDef?.label || varKey || token}`}
                           className="ml-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] text-text-3 hover:bg-red-100 hover:text-red-500 transition-colors duration-fast leading-none">
                           ×
                         </button>
@@ -644,7 +784,6 @@ function StylePanel({
                       ${added
                         ? 'border-accent/30 bg-accent/5 text-accent'
                         : 'border-border bg-surface text-text-2 hover:border-accent hover:bg-canvas-soft hover:text-text'}`}>
-                    <span className="mr-0.5">{v.icon}</span>
                     <span>{v.label}</span>
                   </button>
                 )
@@ -663,6 +802,7 @@ function StylePanel({
             value={config.locationName || ''}
             onChange={e => onChange({ locationName: e.target.value })}
             placeholder="如 北京·故宫 / 上海·外滩"
+            aria-label="地点名称"
             className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast"/>
         </section>
       )}
@@ -672,17 +812,23 @@ function StylePanel({
         <>
           <section>
             <SectionLabel>时间戳位置</SectionLabel>
-            <div className="grid grid-cols-3 gap-1 p-1 bg-canvas rounded-md">
-              {([0, 1, 2, 3, 4, 5, 6, 7, 8] as const).map(p => (
-                <button key={p}
-                  onClick={() => onChange({ timestampPosition: p })}
-                  className={`aspect-square rounded text-[10px] transition-all duration-fast
-                    ${config.timestampPosition === p
-                      ? 'bg-accent text-surface shadow-card'
-                      : 'bg-surface text-text-3 border border-border hover:border-text-3'}`}>
-                  {p + 1}
-                </button>
-              ))}
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-canvas rounded-md" role="radiogroup" aria-label="时间戳位置">
+              {([0, 1, 2, 3, 4, 5, 6, 7, 8] as const).map(p => {
+                const posLabels = ['左上', '中上', '右上', '左中', '正中', '右中', '左下', '中下', '右下']
+                return (
+                  <button key={p}
+                    role="radio"
+                    aria-checked={config.timestampPosition === p}
+                    aria-label={posLabels[p]}
+                    onClick={() => onChange({ timestampPosition: p })}
+                    className={`aspect-square rounded text-[10px] transition-all duration-fast min-h-[36px]
+                      ${config.timestampPosition === p
+                        ? 'bg-accent text-surface shadow-card'
+                        : 'bg-surface text-text-3 border border-border hover:border-text-3'}`}>
+                    {p + 1}
+                  </button>
+                )
+              })}
             </div>
           </section>
           <section>
@@ -692,13 +838,15 @@ function StylePanel({
                 type="color"
                 value={config.timestampColor || '#ff3d00'}
                 onChange={e => onChange({ timestampColor: e.target.value })}
+                aria-label="自定义时间戳颜色"
                 className="w-6 h-6 rounded cursor-pointer bg-transparent border border-border p-0"/>
             </div>
-            <div className="grid grid-cols-6 gap-1">
+            <div className="grid grid-cols-6 gap-1.5">
               {['#ff3d00', '#ff6b35', '#ffcc00', '#00ff88', '#00aaff', '#ff00aa'].map(c => (
                 <button key={c}
                   onClick={() => onChange({ timestampColor: c })}
-                  className={`aspect-square rounded border transition-all duration-fast
+                  aria-label={getColorName(c)}
+                  className={`aspect-square rounded border transition-all duration-fast min-h-[36px]
                     ${(config.timestampColor || '#ff3d00') === c
                       ? 'border-accent scale-110 shadow-card'
                       : 'border-border hover:scale-105'}`}
@@ -714,28 +862,34 @@ function StylePanel({
         <>
           <section>
             <SectionLabel>布局方向</SectionLabel>
-            <div className="segment w-full">
-              <button data-active={config.embedLayout === 'v'}
+            <div className="segment w-full" role="radiogroup" aria-label="布局方向">
+              <button role="radio" aria-checked={config.embedLayout === 'v'} data-active={config.embedLayout === 'v'}
                 onClick={() => onChange({ embedLayout: 'v' })}
                 className="flex-1">垂直</button>
-              <button data-active={config.embedLayout === 'h'}
+              <button role="radio" aria-checked={config.embedLayout === 'h'} data-active={config.embedLayout === 'h'}
                 onClick={() => onChange({ embedLayout: 'h' })}
                 className="flex-1">水平</button>
             </div>
           </section>
           <section>
             <SectionLabel>位置（9 宫格）</SectionLabel>
-            <div className="grid grid-cols-3 gap-1 p-1 bg-canvas rounded-md">
-              {([0, 1, 2, 3, 4, 5, 6, 7, 8] as const).map(p => (
-                <button key={p}
-                  onClick={() => onChange({ embedPosition: p })}
-                  className={`aspect-square rounded text-[10px] transition-all duration-fast
-                    ${config.embedPosition === p
-                      ? 'bg-accent text-surface shadow-card'
-                      : 'bg-surface text-text-3 border border-border hover:border-text-3'}`}>
-                  {p + 1}
-                </button>
-              ))}
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-canvas rounded-md" role="radiogroup" aria-label="文字位置">
+              {([0, 1, 2, 3, 4, 5, 6, 7, 8] as const).map(p => {
+                const posLabels = ['左上', '中上', '右上', '左中', '正中', '右中', '左下', '中下', '右下']
+                return (
+                  <button key={p}
+                    role="radio"
+                    aria-checked={config.embedPosition === p}
+                    aria-label={posLabels[p]}
+                    onClick={() => onChange({ embedPosition: p })}
+                    className={`aspect-square rounded text-[10px] transition-all duration-fast min-h-[36px]
+                      ${config.embedPosition === p
+                        ? 'bg-accent text-surface shadow-card'
+                        : 'bg-surface text-text-3 border border-border hover:border-text-3'}`}>
+                    {p + 1}
+                  </button>
+                )
+              })}
             </div>
           </section>
           <section>
@@ -758,6 +912,7 @@ function StylePanel({
               value={config.watermarkText || config.customText || ''}
               onChange={e => onChange({ watermarkText: e.target.value, customText: e.target.value })}
               placeholder="如 Photo Frame / 摄影师名字"
+              aria-label="水印文本"
               className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast"/>
           </section>
           <section>
@@ -788,11 +943,11 @@ function StylePanel({
 }
 
 // ═══════════════════════════════════════════════════════
-// Template grid (4 columns of minimal thumbnails)
+// Template grid (2 columns of minimal thumbnails)
 // ═══════════════════════════════════════════════════════
 function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" role="radiogroup" aria-label="模板选择">
       {TEMPLATE_GROUPS.map(group => {
         const items = TEMPLATES.filter(t => t.group === group.id)
         return (
@@ -804,13 +959,15 @@ function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: 
               {items.map(t => (
                 <button
                   key={t.id}
+                  role="radio"
+                  aria-checked={selectedId === t.id}
+                  aria-label={`${t.name} - ${t.desc}`}
                   onClick={() => onSelect(t.id)}
                   className={`rounded-lg border transition-all duration-fast overflow-hidden
                     ${selectedId === t.id
                       ? 'border-accent bg-surface shadow-card ring-2 ring-accent/10'
                       : 'border-border bg-surface hover:border-text-3 hover:shadow-card'
-                    }`}
-                  title={t.name + ' · ' + t.desc}>
+                    }`}>
                   <TemplateThumb id={t.id} name={t.name} desc={t.desc} selected={selectedId === t.id} />
                 </button>
               ))}
@@ -822,7 +979,6 @@ function TemplateGrid({ selectedId, onSelect }: { selectedId: string; onSelect: 
   )
 }
 
-// Template thumbnail — larger preview area + embedded name + hint
 function TemplateThumb({ id, name, desc, selected }: { id: string; name: string; desc: string; selected: boolean }) {
   return (
     <div className="flex flex-col">
@@ -841,9 +997,7 @@ function TemplateThumb({ id, name, desc, selected }: { id: string; name: string;
   )
 }
 
-// Pure visual preview of each template (no labels, just the aesthetic)
 function TemplatePreview({ id }: { id: string }) {
-  // 模拟照片：渐变色块
   const photo = 'w-8 h-6 rounded-sm'
   const photoGradient = 'background:linear-gradient(135deg,#f59e0b 0%,#ec4899 50%,#8b5cf6 100%)'
   switch (id) {
@@ -869,17 +1023,11 @@ function TemplatePreview({ id }: { id: string }) {
       return (
         <div className="w-12 h-10 bg-black rounded-sm relative flex flex-col">
           <div className="flex justify-around py-0.5">
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            {[0,1,2,3].map(i => <div key={i} className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>)}
           </div>
           <div className="flex-1 mx-1.5" style={{ background: photoGradient }}/>
           <div className="flex justify-around py-0.5">
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            {[0,1,2,3].map(i => <div key={i} className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>)}
           </div>
         </div>
       )
@@ -923,17 +1071,11 @@ function TemplatePreview({ id }: { id: string }) {
       return (
         <div className="w-12 h-10 bg-black rounded-sm flex flex-col justify-between py-0.5">
           <div className="flex justify-around px-0.5">
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            {[0,1,2,3].map(i => <div key={i} className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>)}
           </div>
           <div className="mx-1.5 h-5" style={{ background: photoGradient }}/>
           <div className="flex justify-around px-0.5">
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
-            <div className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>
+            {[0,1,2,3].map(i => <div key={i} className="w-0.5 h-0.5 bg-white/40 rounded-sm"/>)}
           </div>
         </div>
       )
@@ -950,7 +1092,7 @@ function TemplatePreview({ id }: { id: string }) {
       return (
         <div className="w-9 h-11 bg-white rounded-md shadow-md flex flex-col p-0.5">
           <div className="flex items-center gap-0.5 mb-0.5">
-            <div className="text-[4px]">📕</div>
+            <div className="w-1.5 h-1.5 rounded-sm bg-red-500"/>
             <div className="text-[3px] text-text-3">小红书笔记</div>
           </div>
           <div className="flex-1 rounded-sm" style={{ background: photoGradient }}/>
@@ -983,7 +1125,10 @@ function TemplatePreview({ id }: { id: string }) {
           <div className="absolute inset-x-0 top-0 h-7" style={{ background: photoGradient }}/>
           <div className="absolute inset-x-0 bottom-0 h-3 bg-black rounded-b-sm flex items-center px-1 justify-between">
             <div className="text-[3.5px] text-white">NIKON</div>
-            <div className="text-[3px] text-white">📍 北京·故宫</div>
+            <div className="text-[3px] text-white flex items-center gap-0.5">
+              <svg width="4" height="4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5z"/></svg>
+              北京·故宫
+            </div>
           </div>
         </div>
       )
@@ -1113,7 +1258,7 @@ function InfoPanel({ photo }: { photo: PhotoData | null }) {
     ['GPS',  exif.gps ? `${exif.gps.lat.toFixed(4)}, ${exif.gps.lng.toFixed(4)}` : undefined],
   ]
   return (
-    <div className="p-4 md:p-6">
+    <div className="p-5">
       <div className="space-y-2.5">
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-baseline justify-between gap-3 text-[12px]">
@@ -1138,15 +1283,17 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function RangeRow({ label, value, min, max, step, suffix, onChange }: {
   label: string; value: number; min: number; max: number; step: number; suffix: string; onChange: (v: number) => void
 }) {
+  const id = `range-${label}`
   return (
     <div>
       <div className="flex items-baseline justify-between mb-1.5">
-        <span className="text-[12px] text-text font-medium">{label}</span>
+        <label htmlFor={id} className="text-[12px] text-text font-medium">{label}</label>
         <span className="font-mono text-[11px] text-text-2 tabular-nums">
           {Number.isInteger(step) ? value : value.toFixed(1)}{suffix}
         </span>
       </div>
-      <input type="range" min={min} max={max} step={step} value={value}
+      <input id={id} type="range" min={min} max={max} step={step} value={value}
+        aria-label={label}
         onChange={e => onChange(Number(e.target.value))} />
     </div>
   )
@@ -1161,13 +1308,15 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
         <div className="flex items-center gap-1.5">
           <span className="font-mono text-[10px] text-text-3 uppercase">{value}</span>
           <input type="color" value={value} onChange={e => onChange(e.target.value)}
+            aria-label={`${label}颜色选择器`}
             className="w-5 h-5 rounded cursor-pointer bg-transparent border border-border p-0"/>
         </div>
       </div>
-      <div className="grid grid-cols-8 gap-1">
+      <div className="grid grid-cols-8 gap-1.5">
         {presets.map(c => (
           <button key={c} onClick={() => onChange(c)}
-            className={`aspect-square rounded border transition-all duration-fast
+            aria-label={`${label} ${getColorName(c)}`}
+            className={`aspect-square rounded border transition-all duration-fast min-h-[32px]
               ${value.toLowerCase() === c.toLowerCase() ? 'border-accent scale-110 shadow-card' : 'border-border hover:scale-105'}`}
             style={{ background: c }}/>
         ))}
@@ -1181,6 +1330,9 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
     <div className="flex items-center justify-between py-0.5">
       <span className="text-[12px] text-text">{label}</span>
       <button
+        role="switch"
+        aria-checked={value}
+        aria-label={label}
         onClick={() => onChange(!value)}
         className={`relative w-8 h-[18px] rounded-full transition-colors duration-fast ${value ? 'bg-accent' : 'bg-border-strong'}`}>
         <div className={`absolute top-[2px] w-[14px] h-[14px] bg-white rounded-full shadow transition-transform duration-fast

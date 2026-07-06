@@ -149,7 +149,7 @@ export default function BatchProgressModal({
             onClick={onCancel}
             className={`w-full py-2 rounded-lg text-[12px] font-medium transition-colors ${
               isComplete
-                ? 'bg-text text-white hover:bg-text/90'
+                ? 'btn-primary'
                 : 'btn-outline'
             }`}>
             {isComplete ? '关闭' : '取消导出'}
