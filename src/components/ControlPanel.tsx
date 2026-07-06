@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import type { PhotoData, TemplateConfig } from '../types'
 import { TEMPLATES, TEMPLATE_GROUPS, getDefaultConfig } from '../templates'
-import { FONT_FAMILIES, TEXT_VARIABLES } from '../utils/fonts'
+import { FONT_FAMILIES, TEXT_VARIABLES, replaceTextVars, cleanupText } from '../utils/fonts'
 import { renderFrame } from '../utils/canvas'
 import {
   loadPresets, savePreset, deletePreset,
@@ -177,18 +177,6 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
 
   const patch = (p: Partial<TemplateConfig>) => onChange({ ...config, ...p })
 
-  const handleInsertVariable = (varKey: string) => {
-    const current = config.customText || ''
-    const sep = current && !current.endsWith(' ') ? ' ' : ''
-    patch({ customText: current + sep + `{${varKey}}` })
-  }
-
-  const handleRemoveVariable = (index: number) => {
-    const tokens = parseCustomTextTokens(config.customText)
-    tokens.splice(index, 1)
-    patch({ customText: tokens.join(' ') })
-  }
-
   const handleBatchExport = async (files: File[]) => {
     if (!files.length) return
     const limit = detectDeviceLimit()
@@ -302,6 +290,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
         {tab === 'style' && <StylePanel
           config={config}
           onChange={patch}
+          photo={photo}
           quality={quality}
           setQuality={setQuality}
           format={format}
@@ -311,8 +300,6 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
           onSavePreset={handleSavePreset}
           onDeletePreset={handleDeletePreset}
           onClosePreset={() => setActivePresetId(null)}
-          onInsertVariable={handleInsertVariable}
-          onRemoveVariable={handleRemoveVariable}
         />}
         {tab === 'info'   && <InfoPanel photo={photo} />}
       </div>
@@ -495,15 +482,164 @@ function getColorName(hex: string): string {
 }
 
 // ═══════════════════════════════════════════════════════
+// Custom Text Input — contentEditable + tag palette + preview
+// ═══════════════════════════════════════════════════════
+function CustomTextInput({
+  value, exif, onChange,
+}: {
+  value: string | undefined
+  exif?: { make?: string; model?: string; lens?: string; focalLength?: number; fNumber?: number; exposureTime?: string; iso?: number; dateTaken?: string }
+  onChange: (v: string) => void
+}) {
+  const editorRef = useRef<HTMLDivElement>(null)
+  const isInternalUpdate = useRef(false)
+
+  // 从 config.customText 初始化 contentEditable DOM
+  useEffect(() => {
+    const el = editorRef.current
+    if (!el) return
+    const currentText = extractText(el)
+    if (currentText === (value || '')) return
+    isInternalUpdate.current = true
+    el.innerHTML = ''
+    if (!value) {
+      isInternalUpdate.current = false
+      return
+    }
+    const tokens = parseCustomTextTokens(value)
+    tokens.forEach((token, i) => {
+      if (i > 0) el.appendChild(document.createTextNode(' '))
+      const varMatch = token.match(/^\{(.+)\}$/)
+      if (varMatch) {
+        const varDef = TEXT_VARIABLES.find(v => v.key === varMatch[1])
+        const span = document.createElement('span')
+        span.className = 'var-tag'
+        span.contentEditable = 'false'
+        span.textContent = varDef?.label || varMatch[1]
+        span.dataset.varKey = varMatch[1]
+        el.appendChild(span)
+      } else {
+        el.appendChild(document.createTextNode(token))
+      }
+    })
+    isInternalUpdate.current = false
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value])
+
+  const extractText = useCallback((el: HTMLElement): string => {
+    let text = ''
+    el.childNodes.forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        text += node.textContent || ''
+      } else if (node instanceof HTMLElement && node.dataset.varKey) {
+        text += `{${node.dataset.varKey}}`
+      }
+    })
+    return text.replace(/\s+/g, ' ').trim()
+  }, [])
+
+  const syncToConfig = useCallback(() => {
+    if (isInternalUpdate.current) return
+    const el = editorRef.current
+    if (!el) return
+    onChange(extractText(el))
+  }, [onChange, extractText])
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') e.preventDefault()
+  }, [])
+
+  const insertTag = useCallback((varKey: string) => {
+    const el = editorRef.current
+    if (!el) return
+    el.focus()
+    const varDef = TEXT_VARIABLES.find(v => v.key === varKey)
+    const sel = window.getSelection()
+    let range: Range | null = null
+    if (sel && sel.rangeCount > 0 && el.contains(sel.anchorNode)) {
+      range = sel.getRangeAt(0)
+    } else {
+      range = document.createRange()
+      range.selectNodeContents(el)
+      range.collapse(false)
+    }
+    // 前导空格
+    const container = range.startContainer
+    const offset = range.startOffset
+    const needSpace = container.nodeType === Node.TEXT_NODE
+      && container.textContent && offset > 0
+      && container.textContent[offset - 1] !== ' '
+    if (needSpace) {
+      range.insertNode(document.createTextNode(' '))
+      range.collapse(false)
+    }
+    // 创建标签
+    const span = document.createElement('span')
+    span.className = 'var-tag'
+    span.contentEditable = 'false'
+    span.textContent = varDef?.label || varKey
+    span.dataset.varKey = varKey
+    range.insertNode(span)
+    // 尾部空格 + 光标
+    const spaceAfter = document.createTextNode('\u00A0')
+    span.after(spaceAfter)
+    range.setStartAfter(spaceAfter)
+    range.setEndAfter(spaceAfter)
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+    syncToConfig()
+  }, [syncToConfig])
+
+  const previewText = value
+    ? cleanupText(replaceTextVars(value, exif || {}, {}))
+    : ''
+
+  return (
+    <section>
+      <SectionLabel>自定义文字</SectionLabel>
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        role="textbox"
+        aria-label="自定义文字输入"
+        data-placeholder="输入文字或点击下方标签插入拍摄信息"
+        className="var-editor min-h-[44px] md:min-h-[36px] px-3 py-2 bg-canvas border border-border rounded-md
+                   text-[13px] text-text leading-relaxed
+                   focus:border-accent focus:ring-1 focus:ring-accent/20 outline-none transition-colors duration-fast"
+        onInput={syncToConfig}
+        onKeyDown={handleKeyDown}
+      />
+      <div className="flex gap-1.5 mt-2 overflow-x-auto pb-1 mobile-scroll">
+        {TEXT_VARIABLES.map(v => (
+          <button key={v.key} type="button" onClick={() => insertTag(v.key)}
+            title={`插入${v.label}（示例：${v.sample}）`}
+            className="shrink-0 px-3 py-2 md:px-2 md:py-1.5 text-[11px] rounded-md
+                       border border-border bg-surface text-text-2
+                       hover:border-accent hover:text-text hover:bg-canvas-soft
+                       active:scale-95 transition-all duration-fast
+                       min-h-[40px] md:min-h-[32px]">
+            {v.label}
+          </button>
+        ))}
+      </div>
+      {previewText && (
+        <p className="text-[11px] text-text-2 mt-2 font-mono truncate">预览：{previewText}</p>
+      )}
+    </section>
+  )
+}
+
+// ═══════════════════════════════════════════════════════
 // Style Tab
 // ═══════════════════════════════════════════════════════
 function StylePanel({
-  config, onChange, quality, setQuality, format,
+  config, onChange, photo, quality, setQuality, format,
   presets, activePresetId, onSelectPreset, onSavePreset, onDeletePreset, onClosePreset,
-  onInsertVariable, onRemoveVariable,
 }: {
   config: TemplateConfig
   onChange: (p: Partial<TemplateConfig>) => void
+  photo: PhotoData | null
   quality: number
   setQuality: (v: number) => void
   format: string
@@ -513,8 +649,6 @@ function StylePanel({
   onSavePreset: () => void
   onDeletePreset: () => void
   onClosePreset: () => void
-  onInsertVariable: (varKey: string) => void
-  onRemoveVariable: (index: number) => void
 }) {
   return (
     <div className="p-5 space-y-5 md:space-y-7">
@@ -751,60 +885,12 @@ function StylePanel({
         </section>
       )}
 
-      {/* Custom text */}
-      <section>
-        <div className="flex items-baseline justify-between mb-2">
-          <SectionLabel>自定义文字</SectionLabel>
-          <span className="text-[9px] text-text-3">点击下方标签添加</span>
-        </div>
-        {(() => {
-          const tokens = parseCustomTextTokens(config.customText)
-          const addedKeys = new Set(tokens.map(t => t.match(/^\{(.+)\}$/)?.[1]).filter(Boolean))
-          return (<>
-            <div className="w-full min-h-[38px] px-2 py-1.5 bg-canvas border border-border rounded-md flex flex-wrap gap-1.5 items-center">
-              {tokens.length === 0
-                ? <span className="text-[11px] text-text-3">暂未添加</span>
-                : tokens.map((token, i) => {
-                    const varKey = token.match(/^\{(.+)\}$/)?.[1]
-                    const varDef = varKey ? TEXT_VARIABLES.find(v => v.key === varKey) : null
-                    return (
-                      <span key={`${token}-${i}`}
-                        className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-accent/10 border border-accent/20 text-[11px] text-text font-mono">
-                        <span>{varDef?.label || varKey || token}</span>
-                        <button type="button"
-                          onClick={() => onRemoveVariable(i)}
-                          aria-label={`移除 ${varDef?.label || varKey || token}`}
-                          className="ml-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] text-text-3 hover:bg-red-100 hover:text-red-500 transition-colors duration-fast leading-none">
-                          ×
-                        </button>
-                      </span>
-                    )
-                  })
-              }
-            </div>
-            <p className="text-[9px] text-text-3 mt-1 mb-2 leading-relaxed">
-              自动替换为照片实际拍摄信息
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {TEXT_VARIABLES.map(v => {
-                const added = addedKeys.has(v.key)
-                return (
-                  <button
-                    key={v.key}
-                    onClick={() => onInsertVariable(v.key)}
-                    title={`${added ? '再次插入' : '插入'}${v.label}（示例：${v.sample}）`}
-                    className={`px-1.5 py-1 text-[10px] rounded border transition-colors duration-fast
-                      ${added
-                        ? 'border-accent/30 bg-accent/5 text-accent'
-                        : 'border-border bg-surface text-text-2 hover:border-accent hover:bg-canvas-soft hover:text-text'}`}>
-                    <span>{v.label}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </>)
-        })()}
-      </section>
+      {/* Custom text — rich input with tag insertion */}
+      <CustomTextInput
+        value={config.customText}
+        exif={photo?.exif}
+        onChange={v => onChange({ customText: v })}
+      />
 
       {/* Location (only for location template) */}
       {config.id === 'location' && (
