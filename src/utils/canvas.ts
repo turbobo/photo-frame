@@ -300,7 +300,7 @@ function renderPolaroid({ image, config, exif, logo }: RenderCtx): HTMLCanvasEle
   }
   c.globalAlpha = 1
 
-  // 底部签名文字（保持在白色底边区域，自动缩放防溢出）
+  // 底部签名文字（保持在白色底边区域，强制约束在卡片内）
   const fontPx = Math.max(24, Math.round(long * config.fontSize / 100))
   const signatureLine = resolveCustomText(
     config.customText,
@@ -310,17 +310,22 @@ function renderPolaroid({ image, config, exif, logo }: RenderCtx): HTMLCanvasEle
   )
   if (signatureLine) {
     const maxW = canvas.width - sidePad * 2.4
+    const sigY = cardY + sidePad + H + bottomPad / 2
+    // 垂直安全：字号不能超出底边
+    const cardBottom = cardY + sidePad + H + bottomPad
+    const maxFontH = (cardBottom - sigY) * 1.6  // baseline 到 descender 约 0.3em
     c.font = `400 ${fontPx}px ${f.hand}`
-    let actualFontPx = fontPx
+    let actualFontPx = Math.min(fontPx, Math.floor(maxFontH))
+    // 水平缩放
     if (c.measureText(signatureLine).width > maxW) {
       const scale = maxW / c.measureText(signatureLine).width
-      actualFontPx = Math.max(12, Math.floor(fontPx * scale * 0.95))
-      c.font = `400 ${actualFontPx}px ${f.hand}`
+      actualFontPx = Math.max(10, Math.floor(actualFontPx * scale * 0.95))
     }
+    c.font = `400 ${actualFontPx}px ${f.hand}`
     c.fillStyle = config.textColor
     c.textAlign = 'center'
     c.textBaseline = 'middle'
-    c.fillText(signatureLine, canvas.width / 2, cardY + sidePad + H + bottomPad / 2)
+    c.fillText(signatureLine, canvas.width / 2, sigY, maxW)
   }
 
   return canvas
@@ -1013,22 +1018,27 @@ function renderInstax({ image, config, exif, logo }: RenderCtx): HTMLCanvasEleme
   }
   c.globalAlpha = 1
 
-  // 底部手写签名（保持在白色底边区域，自动缩放防溢出）
+  // 底部手写签名（保持在白色底边区域，强制约束在卡片内）
   const fontPx = Math.round(ref * config.fontSize / 100)
   const signature = resolveCustomText(config.customText, '', exif, config)
   if (signature) {
     const maxW = cardW - sidePad * 3.6
+    const sigY = cardY + topPad + H + bottomPad * 0.55
+    // 垂直安全：字号不能超出底边（预留日期小字空间）
+    const cardBottom = cardY + cardH - sidePad * 0.6
+    const maxFontH = (cardBottom - sigY) * 1.6
     c.font = `400 ${fontPx}px ${f.hand}`
-    let actualFontPx = fontPx
+    let actualFontPx = Math.min(fontPx, Math.max(8, Math.floor(maxFontH)))
+    // 水平缩放
     if (c.measureText(signature).width > maxW) {
       const scale = maxW / c.measureText(signature).width
-      actualFontPx = Math.max(10, Math.floor(fontPx * scale * 0.95))
-      c.font = `400 ${actualFontPx}px ${f.hand}`
+      actualFontPx = Math.max(8, Math.floor(actualFontPx * scale * 0.95))
     }
+    c.font = `400 ${actualFontPx}px ${f.hand}`
     c.fillStyle = config.textColor
     c.textAlign = 'left'
     c.textBaseline = 'middle'
-    c.fillText(signature, cardX + sidePad * 1.2, cardY + topPad + H + bottomPad * 0.55)
+    c.fillText(signature, cardX + sidePad * 1.2, sigY, maxW)
   }
 
   // 右下角日期小字
