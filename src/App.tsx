@@ -13,6 +13,7 @@ export default function App() {
   const [config, setConfig] = useState<TemplateConfig>(getDefaultConfig('exif'))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [activePresetName, setActivePresetName] = useState<string | null>(null)
 
   const handleFileSelect = useCallback(async (file: File) => {
     setLoading(true)
@@ -111,9 +112,16 @@ export default function App() {
                 <div className="flex items-center gap-1 md:gap-2 text-text-2 font-mono text-[10px] md:text-xs shrink-0">
                   {(() => {
                     const tpl = TEMPLATES.find(t => t.id === config.id)
+                    if (activePresetName) {
+                      return (
+                        <span className="px-1.5 py-0.5 rounded bg-accent text-surface font-sans font-medium">
+                          预设 · {activePresetName}
+                        </span>
+                      )
+                    }
                     return tpl ? (
                       <span className="px-1.5 py-0.5 rounded bg-canvas border border-border text-text-3 font-sans font-medium">
-                        {tpl.name}
+                        模板 · {tpl.name}
                       </span>
                     ) : null
                   })()}
@@ -140,6 +148,8 @@ export default function App() {
             onReplace={photo ? handleFileSelect : undefined}
             onClear={photo ? handleClear : undefined}
             loading={loading}
+            onPresetActivate={setActivePresetName}
+            onPresetDeactivate={() => setActivePresetName(null)}
           />
         </aside>
       </div>

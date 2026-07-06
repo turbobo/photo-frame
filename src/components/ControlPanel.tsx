@@ -21,6 +21,8 @@ interface Props {
   onReplace?: (f: File) => void
   onClear?: () => void
   loading?: boolean
+  onPresetActivate?: (name: string) => void
+  onPresetDeactivate?: () => void
 }
 
 type Tab = 'style' | 'info'
@@ -98,7 +100,7 @@ function Toast({ message, type = 'info', onClose }: {
   )
 }
 
-export default function ControlPanel({ photo, config, onChange, logo, loading }: Props) {
+export default function ControlPanel({ photo, config, onChange, logo, loading, onPresetActivate, onPresetDeactivate }: Props) {
   const [tab, setTab] = useState<Tab>('style')
 
   // 导出状态
@@ -138,6 +140,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
   const handleSelectPreset = (preset: TemplatePreset) => {
     onChange(preset.config)
     setActivePresetId(preset.id)
+    onPresetActivate?.(preset.name)
   }
 
   const handleSavePreset = () => {
@@ -151,6 +154,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
     const newPreset = savePreset(name, config)
     setPresets(loadPresets())
     setActivePresetId(newPreset.id)
+    onPresetActivate?.(name)
     setShowSaveDialog(false)
     setToast({ message: `预设「${name}」已保存`, type: 'success' })
   }
@@ -171,11 +175,15 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
     deletePreset(activePresetId!)
     setPresets(loadPresets())
     setActivePresetId(null)
+    onPresetDeactivate?.()
     setShowDeleteDialog(false)
     setToast({ message: `预设「${preset?.name}」已删除`, type: 'info' })
   }
 
-  const patch = (p: Partial<TemplateConfig>) => onChange({ ...config, ...p })
+  const patch = (p: Partial<TemplateConfig>) => {
+    onChange({ ...config, ...p })
+    onPresetDeactivate?.()
+  }
 
   const handleBatchExport = async (files: File[]) => {
     if (!files.length) return
@@ -299,7 +307,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
           onSelectPreset={handleSelectPreset}
           onSavePreset={handleSavePreset}
           onDeletePreset={handleDeletePreset}
-          onClosePreset={() => setActivePresetId(null)}
+          onClosePreset={() => { setActivePresetId(null); onPresetDeactivate?.() }}
         />}
         {tab === 'info'   && <InfoPanel photo={photo} />}
       </div>
