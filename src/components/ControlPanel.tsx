@@ -486,7 +486,7 @@ function StylePanel({
                       const varDef = varKey ? TEXT_VARIABLES.find(v => v.key === varKey) : null
                       return (
                         <span key={i} className="px-1 py-px rounded bg-accent/10 text-[9px] text-text font-mono">
-                          {varDef?.icon ? `${varDef.icon} ${varKey}` : (varKey || token)}
+                          {varDef?.icon ? `${varDef.icon} ${varDef.label}` : (varKey || token)}
                         </span>
                       )
                     })}
@@ -602,7 +602,7 @@ function StylePanel({
       <section>
         <div className="flex items-baseline justify-between mb-2">
           <SectionLabel>自定义文字</SectionLabel>
-          <span className="text-[9px] text-text-3">点击下方变量添加</span>
+          <span className="text-[9px] text-text-3">点击下方标签添加</span>
         </div>
         {(() => {
           const tokens = parseCustomTextTokens(config.customText)
@@ -610,7 +610,7 @@ function StylePanel({
           return (<>
             <div className="w-full min-h-[38px] px-2 py-1.5 bg-canvas border border-border rounded-md flex flex-wrap gap-1.5 items-center">
               {tokens.length === 0
-                ? <span className="text-[11px] text-text-3">暂未添加变量</span>
+                ? <span className="text-[11px] text-text-3">暂未添加</span>
                 : tokens.map((token, i) => {
                     const varKey = token.match(/^\{(.+)\}$/)?.[1]
                     const varDef = varKey ? TEXT_VARIABLES.find(v => v.key === varKey) : null
@@ -618,7 +618,7 @@ function StylePanel({
                       <span key={`${token}-${i}`}
                         className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-accent/10 border border-accent/20 text-[11px] text-text font-mono">
                         {varDef?.icon && <span className="text-[10px]">{varDef.icon}</span>}
-                        <span>{varKey || token}</span>
+                        <span>{varDef?.label || varKey || token}</span>
                         <button type="button"
                           onClick={() => onRemoveVariable(i)}
                           className="ml-0.5 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] text-text-3 hover:bg-red-100 hover:text-red-500 transition-colors duration-fast leading-none">
@@ -630,7 +630,7 @@ function StylePanel({
               }
             </div>
             <p className="text-[9px] text-text-3 mt-1 mb-2 leading-relaxed">
-              渲染时自动替换为照片实际 EXIF 信息
+              自动替换为照片实际拍摄信息
             </p>
             <div className="flex flex-wrap gap-1">
               {TEXT_VARIABLES.map(v => {
@@ -639,7 +639,7 @@ function StylePanel({
                   <button
                     key={v.key}
                     onClick={() => onInsertVariable(v.key)}
-                    title={`${added ? '再次插入' : '插入'} {${v.key}}（示例：${v.sample}）`}
+                    title={`${added ? '再次插入' : '插入'}${v.label}（示例：${v.sample}）`}
                     className={`px-1.5 py-1 text-[10px] rounded border transition-colors duration-fast
                       ${added
                         ? 'border-accent/30 bg-accent/5 text-accent'
