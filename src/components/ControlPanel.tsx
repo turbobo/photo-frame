@@ -376,32 +376,25 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
         <button
           onClick={() => batchInputRef.current?.click()}
           disabled={busy || !!batchProgress}
-          className="btn-outline w-full py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-center gap-2">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="7" width="20" height="14" rx="2"/>
-            <rect x="4" y="4" width="16" height="3" rx="1" opacity="0.5"/>
-            <rect x="6" y="1" width="12" height="3" rx="1" opacity="0.25"/>
-          </svg>
-          批量导出 ZIP
-          <span className="ml-auto text-[10px] text-text-3 font-mono">
-            ≤ {detectDeviceLimit()} 张
-          </span>
+          className="btn-outline w-full py-2.5 rounded-lg text-[13px] font-medium flex flex-col items-center gap-0.5">
+          <div className="flex items-center justify-center gap-2 w-full">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="7" width="20" height="14" rx="2"/>
+              <rect x="4" y="4" width="16" height="3" rx="1" opacity="0.5"/>
+              <rect x="6" y="1" width="12" height="3" rx="1" opacity="0.25"/>
+            </svg>
+            批量导出 ZIP
+            <span className="ml-auto text-[10px] text-text-3 font-mono">
+              ≤ {detectDeviceLimit()} 张
+            </span>
+          </div>
+          {photo && (
+            <span className="text-[10px] text-text-3 font-normal">
+              建议先预览确认效果
+            </span>
+          )}
         </button>
       </div>
-
-      {/* 批量导出提示 — 仅在已加载照片时显示 */}
-      {photo && (
-        <div className="mx-5 mb-4 md:mx-6 md:mb-5 flex items-start gap-2 px-3 py-2.5 md:px-4 md:py-3 rounded-lg bg-canvas border border-border">
-          <svg className="shrink-0 w-3.5 h-3.5 mt-0.5 text-text-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="16" x2="12" y2="12"/>
-            <line x1="12" y1="8" x2="12.01" y2="8"/>
-          </svg>
-          <p className="text-[10px] md:text-[11px] text-text-3 leading-relaxed">
-            批量导出前，建议先用当前照片预览模板效果，确认样式满意后再批量处理。
-          </p>
-        </div>
-      )}
 
       {/* 批量导出进度浮层 */}
       {batchProgress && (
