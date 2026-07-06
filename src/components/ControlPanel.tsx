@@ -111,6 +111,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
 
   // 批量导出状态
   const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null)
+  const [showBatchTip, setShowBatchTip] = useState(false)
   const batchAbortRef = useRef<AbortController | null>(null)
   const batchInputRef = useRef<HTMLInputElement>(null)
 
@@ -373,11 +374,11 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
             if (files.length > 0) handleBatchExport(files)
           }}
         />
-        <button
-          onClick={() => batchInputRef.current?.click()}
-          disabled={busy || !!batchProgress}
-          className="btn-outline w-full py-2.5 rounded-lg text-[13px] font-medium flex flex-col items-center gap-0.5">
-          <div className="flex items-center justify-center gap-2 w-full">
+        <div className="relative group/batch">
+          <button
+            onClick={() => batchInputRef.current?.click()}
+            disabled={busy || !!batchProgress}
+            className="btn-outline w-full py-2.5 rounded-lg text-[13px] font-medium flex items-center justify-center gap-2">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="7" width="20" height="14" rx="2"/>
               <rect x="4" y="4" width="16" height="3" rx="1" opacity="0.5"/>
@@ -387,13 +388,34 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
             <span className="ml-auto text-[10px] text-text-3 font-mono">
               ≤ {detectDeviceLimit()} 张
             </span>
-          </div>
+            {photo && (
+              <span
+                role="button"
+                tabIndex={-1}
+                onClick={e => {
+                  e.stopPropagation()
+                  setShowBatchTip(v => !v)
+                  setTimeout(() => setShowBatchTip(false), 3000)
+                }}
+                className="shrink-0 cursor-help">
+                <svg className="w-3.5 h-3.5 text-text-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="16" x2="12" y2="12"/>
+                  <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+              </span>
+            )}
+          </button>
           {photo && (
-            <span className="text-[10px] text-text-3 font-normal">
-              建议先预览确认效果
-            </span>
+            <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-accent text-surface text-[11px] font-normal leading-relaxed whitespace-nowrap
+                            transition-all duration-fast pointer-events-none z-20
+                            after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2
+                            after:border-4 after:border-transparent after:border-t-accent
+                            ${showBatchTip ? 'opacity-100 visible' : 'opacity-0 invisible group-hover/batch:opacity-100 group-hover/batch:visible'}`}>
+              建议先用当前照片预览模板效果
+            </div>
           )}
-        </button>
+        </div>
       </div>
 
       {/* 批量导出进度浮层 */}
