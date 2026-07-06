@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import type { PhotoData, TemplateConfig } from './types'
 import { loadImage, extractExif } from './utils/exif'
 import { getLogoPath, loadLogo } from './utils/logos'
-import { getDefaultConfig } from './templates'
+import { getDefaultConfig, TEMPLATES } from './templates'
 import PhotoUploader from './components/PhotoUploader'
 import PhotoPreview from './components/PhotoPreview'
 import ControlPanel from './components/ControlPanel'
@@ -109,6 +109,14 @@ export default function App() {
                   {photo.exif.lens && <><span className="text-border-strong hidden md:inline">·</span><span className="hidden md:inline truncate">{photo.exif.lens}</span></>}
                 </div>
                 <div className="flex items-center gap-1 md:gap-2 text-text-2 font-mono text-[10px] md:text-xs shrink-0">
+                  {(() => {
+                    const tpl = TEMPLATES.find(t => t.id === config.id)
+                    return tpl ? (
+                      <span className="px-1.5 py-0.5 rounded bg-canvas border border-border text-text-3 font-sans font-medium">
+                        {tpl.name}
+                      </span>
+                    ) : null
+                  })()}
                   {photo.exif.focalLength && <span>{Math.round(photo.exif.focalLength)}mm</span>}
                   {photo.exif.fNumber && <><span className="text-border-strong">·</span><span>f/{photo.exif.fNumber}</span></>}
                   {photo.exif.exposureTime && <><span className="text-border-strong">·</span><span>{photo.exif.exposureTime}</span></>}
