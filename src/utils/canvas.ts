@@ -236,11 +236,12 @@ function renderMinimal({ image, exif, config, logo }: RenderCtx): HTMLCanvasElem
 // ═══════════════════════════════════════════════════════
 // 模板 2：拍立得 Polaroid —— 上左右窄边，下方大留白
 // ═══════════════════════════════════════════════════════
-function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
+function renderPolaroid({ image, config, exif, logo }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
   const f = makeFontCtx(config, long)
+  const ref = sizeRef(W, H)
   const sidePad = Math.round(long * config.padding / 100)
-  const bottomPad = Math.round(long * config.padding / 100 * 4) // 底部约 4x（更大空间给签名）
+  const bottomPad = Math.round(long * config.padding / 100 * 4)
   const spread = config.shadow ? Math.round(long * 0.04 * 0.4) : 0
 
   const canvas = document.createElement('canvas')
@@ -251,28 +252,68 @@ function renderPolaroid({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.fillStyle = shadowBgColor(config.bgColor)
   c.fillRect(0, 0, canvas.width, canvas.height)
 
-  // 卡片 + 三层阴影
   const { cardX, cardY } = drawCard(c, canvas, config, long)
-
-  // 图像内部轻微内阴影感（微暗底色）
   c.drawImage(image, cardX + sidePad, cardY + sidePad, W, H)
 
-  // 底部签名文字
-  // 用 long 计算字号（与其他模板一致，避免竖版/横版差异过大）
+  // 图像区域内的 Logo 水印（半透明叠加）
+  const imgLeft = cardX + sidePad
+  const imgTop = cardY + sidePad
+  if (config.showLogo && logo) {
+    const wmFontPx = Math.max(10, Math.round(long * config.fontSize / 100 * 0.55))
+    const wmPadX = Math.round(W * 0.04)
+    const wmPadY = Math.round(H * 0.04)
+    const lh = Math.round(wmFontPx * 1.5)
+    const lw = Math.round(lh * (logo.width / logo.height))
+    c.save()
+    c.globalAlpha = 0.55
+    c.drawImage(logo, imgLeft + wmPadX, imgTop + H - wmPadY - lh, lw, lh)
+    c.restore()
+  }
+
+  // 底部白色边框区域内的 EXIF 参数信息
+  const borderInfoFontPx = Math.max(10, Math.round(long * config.fontSize / 100 * 0.45))
+  const borderTop = imgTop + H  // 图像底边 = 边框区域顶边
+  let borderCurY = borderTop + bottomPad * 0.15
+
+  if (config.showLogo) {
+    const modelText = exif.model ?? ''
+    if (modelText) {
+      c.font = `500 ${Math.round(borderInfoFontPx * 1.1)}px ${f.display}`
+      c.fillStyle = config.textColor
+      c.globalAlpha = 0.7
+      c.textAlign = 'left'
+      c.textBaseline = 'top'
+      c.fillText(modelText, cardX + sidePad * 1.2, borderCurY)
+      borderCurY += Math.round(borderInfoFontPx * 1.1 * 1.5)
+    }
+  }
+  if (config.showExif) {
+    const paramText = formatExifLine(exif)
+    if (paramText) {
+      c.font = `400 ${borderInfoFontPx}px ${f.mono}`
+      c.fillStyle = config.textColor
+      c.globalAlpha = 0.5
+      c.textAlign = 'left'
+      c.textBaseline = 'top'
+      c.fillText(paramText, cardX + sidePad * 1.2, borderCurY)
+    }
+  }
+  c.globalAlpha = 1
+
+  // 底部签名文字（保持在白色底边区域）
   const fontPx = Math.max(24, Math.round(long * config.fontSize / 100))
-  c.fillStyle = config.textColor
-  c.font = `400 ${fontPx}px ${f.hand}`
-  c.textAlign = 'center'
-  c.textBaseline = 'middle'
-  // 优先 customText → exif.dateTaken → 默认 "signature"
-  const line = resolveCustomText(
+  const signatureLine = resolveCustomText(
     config.customText,
     exif.dateTaken || 'signature',
     exif,
     config,
   )
-  if (line) {
-    c.fillText(line, canvas.width / 2, cardY + sidePad + H + bottomPad / 2)
+  if (signatureLine) {
+    c.fillStyle = config.textColor
+    c.font = `400 ${fontPx}px ${f.hand}`
+    c.textAlign = 'center'
+    c.textBaseline = 'middle'
+    c.fillText(signatureLine, canvas.width / 2, cardY + sidePad + H + bottomPad / 2)
   }
 
   return canvas
@@ -883,7 +924,7 @@ function renderDazz({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 // ═══════════════════════════════════════════════════════
 // 模板 9：Instax 真实拍立得 —— 顶部窄边 + 底部超宽留白 + 签名 + 日期角标
 // ═══════════════════════════════════════════════════════
-function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
+function renderInstax({ image, config, exif, logo }: RenderCtx): HTMLCanvasElement {
   const W = image.width, H = image.height, long = Math.max(W, H)
   const f = makeFontCtx(config, long)
   const ref = sizeRef(W, H)
@@ -897,11 +938,9 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   canvas.height = H + topPad + bottomPad + spread * 2
   const c = canvas.getContext('2d')!
 
-  // 米白底 + 微弱纸张纹理
   c.fillStyle = shadowBgColor(config.bgColor)
   c.fillRect(0, 0, canvas.width, canvas.height)
 
-  // 卡片 + 三层阴影
   const { cardX, cardY, cardW, cardH } = drawCard(c, canvas, config, long)
 
   // 卡片内部纸张纹理（弱渐变）
@@ -922,14 +961,59 @@ function renderInstax({ image, config, exif }: RenderCtx): HTMLCanvasElement {
   c.restore()
   c.drawImage(image, cardX + sidePad, cardY + topPad, W, H)
 
-  // 底部手写签名
+  // 图像区域内的 Logo 水印（半透明叠加）
+  const imgLeft = cardX + sidePad
+  const imgTop = cardY + topPad
+  if (config.showLogo && logo) {
+    const wmFontPx = Math.max(10, Math.round(long * config.fontSize / 100 * 0.55))
+    const wmPadX = Math.round(W * 0.04)
+    const wmPadY = Math.round(H * 0.04)
+    const lh = Math.round(wmFontPx * 1.5)
+    const lw = Math.round(lh * (logo.width / logo.height))
+    c.save()
+    c.globalAlpha = 0.55
+    c.drawImage(logo, imgLeft + wmPadX, imgTop + H - wmPadY - lh, lw, lh)
+    c.restore()
+  }
+
+  // 底部白色边框区域内的 EXIF 参数信息
+  const borderInfoFontPx = Math.max(10, Math.round(long * config.fontSize / 100 * 0.45))
+  const borderTop = imgTop + H  // 图像底边 = 边框区域顶边
+  let borderCurY = borderTop + bottomPad * 0.22
+
+  if (config.showLogo) {
+    const modelText = exif.model ?? ''
+    if (modelText) {
+      c.font = `500 ${Math.round(borderInfoFontPx * 1.1)}px ${f.display}`
+      c.fillStyle = config.textColor
+      c.globalAlpha = 0.7
+      c.textAlign = 'left'
+      c.textBaseline = 'top'
+      c.fillText(modelText, cardX + sidePad * 1.2, borderCurY)
+      borderCurY += Math.round(borderInfoFontPx * 1.1 * 1.5)
+    }
+  }
+  if (config.showExif) {
+    const paramText = formatExifLine(exif)
+    if (paramText) {
+      c.font = `400 ${borderInfoFontPx}px ${f.mono}`
+      c.fillStyle = config.textColor
+      c.globalAlpha = 0.5
+      c.textAlign = 'left'
+      c.textBaseline = 'top'
+      c.fillText(paramText, cardX + sidePad * 1.2, borderCurY)
+    }
+  }
+  c.globalAlpha = 1
+
+  // 底部手写签名（保持在白色底边区域）
   const fontPx = Math.round(ref * config.fontSize / 100)
-  c.fillStyle = config.textColor
-  c.font = `400 ${fontPx}px ${f.hand}`
-  c.textAlign = 'left'
-  c.textBaseline = 'middle'
   const signature = resolveCustomText(config.customText, '', exif, config)
   if (signature) {
+    c.fillStyle = config.textColor
+    c.font = `400 ${fontPx}px ${f.hand}`
+    c.textAlign = 'left'
+    c.textBaseline = 'middle'
     c.fillText(signature, cardX + sidePad * 1.2, cardY + topPad + H + bottomPad * 0.55)
   }
 
