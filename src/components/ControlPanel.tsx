@@ -385,9 +385,6 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
               <rect x="6" y="1" width="12" height="3" rx="1" opacity="0.25"/>
             </svg>
             批量导出 ZIP
-            <span className="ml-auto text-[10px] text-text-3 font-mono">
-              ≤ {detectDeviceLimit()} 张
-            </span>
             <span
               role="button"
               tabIndex={-1}
@@ -402,6 +399,9 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
                 <line x1="12" y1="16" x2="12" y2="12"/>
                 <line x1="12" y1="8" x2="12.01" y2="8"/>
               </svg>
+            </span>
+            <span className="ml-auto text-[10px] text-text-3 font-mono">
+              ≤ {detectDeviceLimit()} 张
             </span>
           </button>
           <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-accent text-surface text-[11px] font-normal leading-relaxed whitespace-nowrap
