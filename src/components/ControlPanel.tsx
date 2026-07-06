@@ -388,33 +388,29 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
             <span className="ml-auto text-[10px] text-text-3 font-mono">
               ≤ {detectDeviceLimit()} 张
             </span>
-            {photo && (
-              <span
-                role="button"
-                tabIndex={-1}
-                onClick={e => {
-                  e.stopPropagation()
-                  setShowBatchTip(v => !v)
-                  setTimeout(() => setShowBatchTip(false), 3000)
-                }}
-                className="shrink-0 cursor-help">
-                <svg className="w-3.5 h-3.5 text-text-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="16" x2="12" y2="12"/>
-                  <line x1="12" y1="8" x2="12.01" y2="8"/>
-                </svg>
-              </span>
-            )}
+            <span
+              role="button"
+              tabIndex={-1}
+              onClick={e => {
+                e.stopPropagation()
+                setShowBatchTip(v => !v)
+                setTimeout(() => setShowBatchTip(false), 3000)
+              }}
+              className="shrink-0 cursor-help">
+              <svg className="w-3.5 h-3.5 text-text-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="16" x2="12" y2="12"/>
+                <line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+            </span>
           </button>
-          {photo && (
-            <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-accent text-surface text-[11px] font-normal leading-relaxed whitespace-nowrap
-                            transition-all duration-fast pointer-events-none z-20
-                            after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2
-                            after:border-4 after:border-transparent after:border-t-accent
-                            ${showBatchTip ? 'opacity-100 visible' : 'opacity-0 invisible group-hover/batch:opacity-100 group-hover/batch:visible'}`}>
-              建议先用当前照片预览模板效果
-            </div>
-          )}
+          <div className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 rounded-lg bg-accent text-surface text-[11px] font-normal leading-relaxed whitespace-nowrap
+                          transition-all duration-fast pointer-events-none z-20
+                          after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2
+                          after:border-4 after:border-transparent after:border-t-accent
+                          ${showBatchTip ? 'opacity-100 visible' : 'opacity-0 invisible group-hover/batch:opacity-100 group-hover/batch:visible'}`}>
+            建议先用当前照片预览模板效果
+          </div>
         </div>
       </div>
 
