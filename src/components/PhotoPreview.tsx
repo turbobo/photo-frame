@@ -73,7 +73,7 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
   }, [rendered, scale])
 
   return (
-    <div ref={containerRef} className="h-full w-full flex items-center justify-center p-1.5 md:p-10 bg-canvas relative overflow-hidden">
+    <div ref={containerRef} className="h-full w-full flex items-center justify-center p-3 md:p-10 bg-canvas relative overflow-hidden">
       {/* 背景模糊层 —— 照片自身色彩扩散为柔焦光晕 */}
       {bgUrl && (
         <>
@@ -84,13 +84,12 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
               backgroundSize: '110% 110%',
               backgroundPosition: 'center',
               backgroundRepeat: 'no-repeat',
-              filter: 'blur(100px) saturate(1.2) brightness(1.05)',
+              filter: 'blur(30px) saturate(1.2) brightness(1.05)',
               opacity: 0.3,
-              transform: 'scale(1.08)', // 放大避免模糊边缘露白
+              transform: 'scale(1.08)',
             }}
             aria-hidden="true"
           />
-          {/* 极浅叠加层 —— 保持近白画布的纯净感 */}
           <div
             className="absolute inset-0"
             style={{ background: 'rgba(250, 250, 249, 0.5)' }}
@@ -123,7 +122,7 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
 
       {/* 浮动操作栏 —— 左下角（换一张 + 清空） */}
       {(onReplace || onClear) && (
-        <div className="absolute bottom-2 left-2 md:bottom-4 md:left-4 z-20 flex items-center gap-1.5">
+        <div className="absolute bottom-3 left-3 md:bottom-4 md:left-4 z-20 flex items-center gap-2">
           {/* 隐藏的 file input */}
           <input
             ref={fileInputRef}
@@ -141,13 +140,13 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
           {onReplace && (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="group/btn flex items-center gap-1.5 px-3 py-1.5 rounded-full
+              className="group/btn flex items-center gap-1.5 px-4 py-2.5 md:px-3 md:py-1.5 rounded-full
                 bg-black/60 backdrop-blur-md border border-white/10
                 hover:bg-black/75 hover:border-white/20
                 text-white text-[12px] font-medium
                 shadow-elev transition-all duration-fast"
               title="换一张照片">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-[18px] h-[18px] md:w-[14px] md:h-[14px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/>
                 <path d="M3 12a9 9 0 0 1 15.5-6.3L21 8"/>
                 <polyline points="3 22 3 16 9 16"/>
@@ -161,13 +160,13 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
           {onClear && (
             <button
               onClick={onClear}
-              className="group/btn flex items-center gap-1.5 px-3 py-1.5 rounded-full
+              className="group/btn flex items-center gap-1.5 px-4 py-2.5 md:px-3 md:py-1.5 rounded-full
                 bg-black/60 backdrop-blur-md border border-white/10
                 hover:bg-red-500/80 hover:border-red-400/40
                 text-white text-[12px] font-medium
                 shadow-elev transition-all duration-fast"
               title="清空照片回到上传">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <svg className="w-[18px] h-[18px] md:w-[14px] md:h-[14px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6"/>
                 <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
                 <path d="M10 11v6M14 11v6"/>

@@ -33,7 +33,7 @@
 * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 
 html, body, #root {
-  height: 100%; margin: 0;
+  height: 100dvh; margin: 0;
   background: var(--surface);
   color: var(--text);
   font-family: var(--font-ui);
@@ -41,9 +41,31 @@ html, body, #root {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.01em;
+  overscroll-behavior: none;
 }
 @media (max-width: 767px) {
-  html, body, #root { height: auto; min-height: 100%; }
+  html, body, #root { height: auto; min-height: 100dvh; }
+}
+
+/* ── 移动端触控优化 ── */
+@media (max-width: 767px) {
+  /* 全局消除 300ms 点击延迟 */
+  * { touch-action: manipulation; }
+
+  /* 滑块拇指放大到 22px */
+  input[type="range"] { height: 28px; }
+  input[type="range"]::-webkit-slider-thumb {
+    width: 22px; height: 22px; margin-top: -10px;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 22px; height: 22px;
+  }
+
+  /* 分段控件按钮放大 */
+  .segment button { padding: 8px 14px; font-size: 12px; }
+
+  /* 滚动容器防止橡皮筋 */
+  .mobile-scroll { overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
 }
 
 @media (min-width: 768px) {

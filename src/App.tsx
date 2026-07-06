@@ -60,9 +60,10 @@ export default function App() {
   }, [handleFileSelect])
 
   return (
-    <div className="min-h-full md:h-full flex flex-col bg-bg text-text md:overflow-hidden">
+    <div className="h-[100dvh] flex flex-col bg-bg text-text overflow-hidden"
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       {/* ─────── Header ─────── */}
-      <header className="flex items-center justify-between px-4 md:px-7 h-[52px] md:h-[64px] shrink-0 border-b border-border bg-surface">
+      <header className="flex items-center justify-between px-4 md:px-7 h-[48px] md:h-[64px] shrink-0 border-b border-border bg-surface">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 flex items-center justify-center">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#18181b" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -87,9 +88,9 @@ export default function App() {
       </header>
 
       {/* ─────── Main: Preview + Control Panel ─────── */}
-      <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
-        {/* Preview Area */}
-        <main className="min-h-[200px] flex-1 md:h-auto md:flex-1 flex flex-col overflow-hidden relative bg-canvas">
+      <div className="flex flex-col md:flex-row flex-1 min-h-0">
+        {/* Preview Area — 移动端固定高度，桌面端自适应 */}
+        <main className="h-[40dvh] md:h-auto md:flex-1 flex flex-col overflow-hidden relative bg-canvas shrink-0 md:shrink">
           {photo ? (
             <>
               <div className="flex-1 overflow-hidden">
@@ -121,8 +122,8 @@ export default function App() {
           )}
         </main>
 
-        {/* Control Panel */}
-        <aside className="w-full md:w-[320px] shrink-0 border-t md:border-t-0 md:border-l border-border bg-surface md:overflow-y-auto">
+        {/* Control Panel — 移动端占满剩余空间并独立滚动 */}
+        <aside className="flex-1 min-h-0 md:w-[320px] md:flex-none border-t md:border-t-0 md:border-l border-border bg-surface overflow-y-auto mobile-scroll">
           <ControlPanel
             photo={photo}
             config={config}

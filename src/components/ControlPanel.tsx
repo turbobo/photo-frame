@@ -318,7 +318,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
       </div>
 
       {/* ─── 常驻导出栏（sticky footer）─── */}
-      <div className="shrink-0 border-t border-border bg-surface px-5 py-3 md:py-4 space-y-3">
+      <div className="sticky bottom-0 z-10 shrink-0 border-t border-border bg-surface px-5 py-3 md:py-4 space-y-3">
         {/* 格式 */}
         <div className="flex items-center gap-2">
           <span className="font-caption text-text-3 w-10 shrink-0">格式</span>
@@ -1340,16 +1340,16 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
 
 function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div className="flex items-center justify-between py-0.5">
+    <div className="flex items-center justify-between py-2 md:py-0.5 min-h-[44px] md:min-h-0">
       <span className="text-[12px] text-text">{label}</span>
       <button
         role="switch"
         aria-checked={value}
         aria-label={label}
         onClick={() => onChange(!value)}
-        className={`relative w-8 h-[18px] rounded-full transition-colors duration-fast ${value ? 'bg-accent' : 'bg-border-strong'}`}>
-        <div className={`absolute top-[2px] w-[14px] h-[14px] bg-white rounded-full shadow transition-transform duration-fast
-          ${value ? 'translate-x-[15px]' : 'translate-x-[2px]'}`}/>
+        className={`relative w-11 h-6 md:w-8 md:h-[18px] rounded-full transition-colors duration-fast ${value ? 'bg-accent' : 'bg-border-strong'}`}>
+        <div className={`absolute top-[2px] w-5 h-5 md:w-[14px] md:h-[14px] bg-white rounded-full shadow transition-transform duration-fast
+          ${value ? 'translate-x-[21px] md:translate-x-[15px]' : 'translate-x-[2px]'}`}/>
       </button>
     </div>
   )
