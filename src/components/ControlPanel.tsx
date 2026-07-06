@@ -379,12 +379,21 @@ export default function ControlPanel({ photo, config, onChange, logo, loading }:
             ≤ {detectDeviceLimit()} 张
           </span>
         </button>
-        {photo && (
-          <p className="text-[10px] text-text-3 text-center mt-2">
-            提示：建议先用当前照片预览模板效果
-          </p>
-        )}
       </div>
+
+      {/* 批量导出提示 — 仅在已加载照片时显示 */}
+      {photo && (
+        <div className="mx-5 mb-4 md:mx-6 md:mb-5 flex items-start gap-2 px-3 py-2.5 md:px-4 md:py-3 rounded-lg bg-canvas border border-border">
+          <svg className="shrink-0 w-3.5 h-3.5 mt-0.5 text-text-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          <p className="text-[10px] md:text-[11px] text-text-3 leading-relaxed">
+            批量导出前，建议先用当前照片预览模板效果，确认样式满意后再批量处理。
+          </p>
+        </div>
+      )}
 
       {/* 批量导出进度浮层 */}
       {batchProgress && (
