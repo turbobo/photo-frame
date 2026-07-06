@@ -56,14 +56,16 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
       const pad = rect.width < 640 ? 12 : 56
       const availW = rect.width - pad * 2
       const availH = rect.height - pad * 2
-      const s = Math.min(availW / rendered.width, availH / rendered.height, 1)
-      setScale(Math.max(0.05, s))
+      const base = Math.min(availW / rendered.width, availH / rendered.height, 1)
+      // instax/polaroid 底部大留白模板，预览区额外缩小以留出呼吸空间
+      const previewShrink = (config.id === 'instax' || config.id === 'polaroid') ? 0.92 : 1
+      setScale(Math.max(0.05, base * previewShrink))
     }
     compute()
     const ro = new ResizeObserver(compute)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [rendered])
+  }, [rendered, config.id])
 
   const size = useMemo(() => {
     if (!rendered) return { w: 0, h: 0 }
