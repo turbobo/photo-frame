@@ -911,7 +911,7 @@ function StylePanel({
               type="text"
               value={config.watermarkText || config.customText || ''}
               onChange={e => onChange({ watermarkText: e.target.value, customText: e.target.value })}
-              placeholder="如 Photo Frame / 摄影师名字"
+              placeholder="如 Framelet / 摄影师名字"
               aria-label="水印文本"
               className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast"/>
           </section>
@@ -1226,7 +1226,7 @@ function TemplatePreview({ id }: { id: string }) {
             {[0, 1, 2, 3].map(i => (
               <div key={i} className="flex gap-1">
                 {[0, 1, 2].map(j => (
-                  <div key={j} className="text-[2px] text-white whitespace-nowrap">Photo Frame</div>
+                  <div key={j} className="text-[2px] text-white whitespace-nowrap">Framelet</div>
                 ))}
               </div>
             ))}

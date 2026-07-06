@@ -53,7 +53,7 @@ export interface TemplateConfig {
   embedPosition?: GridPosition       // 9 宫格位置（默认 7 = bottom-left）
   embedOpacity?: number              // 0-1（默认 0.55）
   // 平铺水印（tiled-watermark）
-  watermarkText?: string     // 水印文本（默认 customText 或 "Photo Frame"）
+  watermarkText?: string     // 水印文本（默认 customText 或 "Framelet"）
   watermarkAngle?: number    // 旋转角度 -45~45 度（默认 -22）
   watermarkDensity?: number  // 密度 0.5~3（默认 1，越大越密）
   watermarkOpacity?: number  // 0-1（默认 0.18）

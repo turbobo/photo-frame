@@ -1721,7 +1721,7 @@ function renderSplashScreen(
   const footerY = side - outerPad - basePx * 2.8
   c.fillStyle = withAlpha(config.textColor, 0.5)
   c.font = `300 ${Math.round(basePx * 0.7)}px ${f.ui}`
-  const copyright = config.copyright ?? '© Photo Frame. All rights reserved.'
+  const copyright = config.copyright ?? '© Framelet. All rights reserved.'
   c.fillText(copyright, leftX, footerY)
   const website = config.website ?? ''
   if (website) {
@@ -2126,7 +2126,7 @@ function renderTiledWatermark({ image, config, exif }: RenderCtx): HTMLCanvasEle
   const opacity = config.watermarkOpacity ?? 0.18
   const text = (config.watermarkText || config.customText)
     ? cleanupText(replaceTextVars(config.watermarkText || config.customText, exif, { locationName: config.locationName, copyright: config.copyright }))
-    : 'Photo Frame'
+    : 'Framelet'
 
   const canvas = document.createElement('canvas')
   canvas.width = W

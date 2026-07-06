@@ -1,4 +1,4 @@
-# Photo Frame · 相框水印工具 — UI 设计规范文档
+# 框影 · Framelet — UI 设计规范文档
 
 > 版本：v2.0.0 · 最后更新：2026-07-06
 > 审计工具：`frontend-design` · `ui-ux-pro-max` · `taste-skill`
@@ -9,7 +9,7 @@
 
 ### 1.1 风格定位：Minimal Clean（中性极简）
 
-Photo Frame 的 UI 遵循**中性极简**原则：让照片成为唯一主角，工具界面退为背景。
+框影的 UI 遵循**中性极简**原则：让照片成为唯一主角，工具界面退为背景。
 
 **核心原则**：
 - **去色彩**：全局零彩色强调，仅使用 Stone 暖灰色阶，功能性色彩（红/绿/琥珀）仅用于状态反馈
@@ -97,7 +97,7 @@ Photo Frame 的 UI 遵循**中性极简**原则：让照片成为唯一主角，
 | 角色 | CSS 变量 | 字体栈 | 用途 |
 |------|---------|--------|------|
 | UI Sans | `--font-ui` | Inter → -apple-system → PingFang SC → Noto Sans SC | 界面文字（默认） |
-| Display | `--font-display` | Noto Serif SC → Songti SC → Source Han Serif SC | 页面标题（Photo Frame） |
+| Display | `--font-display` | Noto Serif SC → Songti SC → Source Han Serif SC | 页面标题（框影） |
 | Mono | `--font-mono` | JetBrains Mono → SF Mono → Menlo | EXIF 参数、数值、代码 |
 | Hand | `--font-hand` | LXGW WenKai Mono TC → STKaiti → Kaiti SC | 拍立得签名、手写文字 |
 
@@ -105,7 +105,7 @@ Photo Frame 的 UI 遵循**中性极简**原则：让照片成为唯一主角，
 
 | Tailwind class | 字号 | 行高 | 字距 | 使用场景 |
 |---------------|------|------|------|---------|
-| `.font-display` | 22px | 1.15 | -0.01em | 页面标题（Photo Frame） |
+| `.font-display` | 22px | 1.15 | -0.01em | 页面标题（框影） |
 | `.font-title` | 13px / 500 | 1.4 | -0.005em | 面板节标题 |
 | `.font-body` | 12px / 400 | 1.5 | — | 正文描述 |
 | `.font-caption` | 9.5px / 600 | 1.4 | 0.12em | 大写标签（UPPERCASE） |

@@ -168,7 +168,7 @@ export async function runBatchExport(params: BatchExportParams): Promise<BatchRe
       String(now.getMinutes()).padStart(2, '0'),
       String(now.getSeconds()).padStart(2, '0'),
     ].join('')
-    const zipName = `photo-frame-batch-${ts}.zip`
+    const zipName = `framelet-batch-${ts}.zip`
 
     const zipBlob = new Blob([merged], { type: 'application/zip' })
     const url = URL.createObjectURL(zipBlob)

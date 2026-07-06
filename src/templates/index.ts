@@ -140,8 +140,8 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
         showExif: true,
         shadow: true,
         imageRadius: 8,
-        copyright: '© 2025 Photo Frame. All rights reserved.',
-        website: 'photoframe.app',
+        copyright: '© 2025 Framelet. All rights reserved.',
+        website: 'framelet.app',
         isAcrylic: false,
       }
     case 'lr-splash':
@@ -155,8 +155,8 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
         showExif: true,
         shadow: true,
         imageRadius: 8,
-        copyright: '© 2025 Photo Frame. All rights reserved.',
-        website: 'photoframe.app',
+        copyright: '© 2025 Framelet. All rights reserved.',
+        website: 'framelet.app',
         isAcrylic: false,
       }
     case 'vintage-photo':
@@ -196,8 +196,8 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
         showLogo: false,
         showExif: false,
         shadow: false,
-        customText: 'Photo Frame',
-        watermarkText: 'Photo Frame',
+        customText: 'Framelet',
+        watermarkText: 'Framelet',
         watermarkAngle: -22,
         watermarkDensity: 1,
         watermarkOpacity: 0.18,

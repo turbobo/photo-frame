@@ -72,8 +72,8 @@ export default function App() {
             </svg>
           </div>
           <div className="flex items-baseline gap-1.5">
-            <h1 className="font-display">Photo Frame</h1>
-            <span className="text-[10px] text-text-3 font-mono tracking-tight">v2</span>
+            <h1 className="font-display">框影</h1>
+            <span className="text-[10px] text-text-3 font-mono tracking-wide">Framelet</span>
           </div>
         </div>
 
