@@ -1778,7 +1778,7 @@ function renderSplashScreen(
     c.restore()
   } else {
     c.fillStyle = opts.accentColor
-    c.font = `700 ${Math.round(logoBoxSize * 0.45)}px ${f.ui}`
+    c.font = `600 ${Math.round(logoBoxSize * 0.45)}px ${f.ui}`
     c.textAlign = 'center'
     c.textBaseline = 'middle'
     c.fillText(opts.brandText, leftX + logoBoxSize / 2, outerPad + logoBoxSize / 2)
