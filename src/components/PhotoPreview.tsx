@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PhotoData, TemplateConfig } from '../types'
 import { renderFrame } from '../utils/canvas'
+import FullscreenPreview from './FullscreenPreview'
 
 interface Props {
   photo: PhotoData
@@ -16,6 +17,8 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
   const [rendered, setRendered] = useState<HTMLCanvasElement | null>(null)
   const [scale, setScale] = useState(1)
   const [bgUrl, setBgUrl] = useState<string | null>(null)
+  const [fullscreenOpen, setFullscreenOpen] = useState(false)
+  const isMobile = useMemo(() => window.innerWidth < 768, [])
 
   // 渲染带边框的完整图像（等待字体加载完成后再渲染，避免首次渲染用错字体）
   useEffect(() => {
@@ -106,9 +109,32 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
             width: size.w,
             height: size.h,
             boxShadow: '0 8px 24px rgba(28,25,23,0.12), 0 2px 6px rgba(28,25,23,0.06)',
-          }}>
+            cursor: isMobile ? 'zoom-in' : 'default',
+          }}
+          onClick={() => { if (isMobile) setFullscreenOpen(true) }}
+        >
           <PreviewCanvas source={rendered} width={size.w} height={size.h} />
+          {isMobile && (
+            <div className="absolute top-2 right-2 bg-black/40 backdrop-blur-sm rounded-full px-2 py-0.5
+              text-white/70 text-[9px] pointer-events-none md:hidden flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                <line x1="11" y1="8" x2="11" y2="14"/>
+                <line x1="8" y1="11" x2="14" y2="11"/>
+              </svg>
+              点击放大
+            </div>
+          )}
         </div>
+      )}
+
+      {/* 全屏预览浮层（仅手机端） */}
+      {fullscreenOpen && rendered && (
+        <FullscreenPreview
+          rendered={rendered}
+          onClose={() => setFullscreenOpen(false)}
+        />
       )}
 
       {/* 尺寸信息角标 */}
