@@ -466,6 +466,7 @@ function renderExif({ image, exif, config, logo }: RenderCtx): HTMLCanvasElement
     const modelW = modelPart ? c.measureText(modelPart).width : 0
     c.font = `400 ${fontPx * 0.9}px ${f.mono}`
     const restW = textStr ? c.measureText(textStr).width : 0
+    c.font = `400 ${fontPx * 0.9}px ${f.ui}`
     const sepW = modelPart && textStr ? c.measureText('  ').width : 0
 
     const logoH = hasLogo ? Math.round(barH * 0.4) : 0
@@ -1527,19 +1528,21 @@ function renderFramelessRounded({ image, config, exif, logo }: RenderCtx): HTMLC
     let logoEndX = centerX
     if (config.showLogo && logo && exif.model) {
       // 测量型号文字宽度，反推 Logo 起始位置，使整体居中
-      c.font = `500 ${Math.round(fontPx * 1.1)}px ${f.display}`
+      const modelFontSize = Math.round(fontPx * 1.1)
+      c.font = `500 ${modelFontSize}px ${f.display}`
       const modelW = c.measureText(exif.model).width
       const logoH = Math.round(fontPx * 1.4)
       const logoW = logoH * (logo.width / logo.height)
       const gap = fontPx * 0.5
       const totalW = logoW + gap + modelW
       const startX = centerX - totalW / 2
-      c.drawImage(logo, startX, curY + (fontPx * 1.1 - logoH) / 2, logoW, logoH)
+      // Logo 与文字中线对齐：文字 baseline=middle 时视觉中心在 box 的 50% 处
+      c.drawImage(logo, startX, curY + (modelFontSize - logoH) / 2, logoW, logoH)
       logoEndX = startX + logoW + gap
       c.textAlign = 'left'
       c.textBaseline = 'middle'
       c.fillStyle = config.textColor
-      c.fillText(exif.model, logoEndX, curY + fontPx * 0.55)
+      c.fillText(exif.model, logoEndX, curY + modelFontSize / 2)
     } else if (exif.model) {
       c.textAlign = 'center'
       c.textBaseline = 'middle'
