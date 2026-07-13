@@ -57,6 +57,7 @@ export interface TemplateConfig {
   watermarkAngle?: number    // 旋转角度 -45~45 度（默认 -22）
   watermarkDensity?: number  // 密度 0.5~3（默认 1，越大越密）
   watermarkOpacity?: number  // 0-1（默认 0.18）
+  hideEmptyExif?: boolean    // 无 EXIF 时隐藏参数栏（默认 true）
 }
 
 export interface PhotoData {

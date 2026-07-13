@@ -3,7 +3,7 @@ import type { ExifData, TemplateConfig, GridPosition } from '../types'
 import {
   WATERMARK, withAlpha, formatExifLine, getFontStack,
   getFontForRole, getResponsive, replaceTextVars, cleanupText,
-  shadowBgColor,
+  shadowBgColor, hasAnyExifData,
   type ResponsiveConfig,
 } from './fonts'
 import {
@@ -781,6 +781,21 @@ function renderLeica({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   const f = makeFontCtx(config, long)
   const ref = sizeRef(W, H)
   const displayFont = getFontStack(config.fontFamily)
+
+  // 检查是否有可显示的内容（EXIF 或自定义文字）
+  const hasExifData = hasAnyExifData(exif) || config.customText
+  const shouldHideEmptyExif = config.hideEmptyExif !== false // 默认 true
+
+  // 如果配置为隐藏空 EXIF 且无内容，直接返回原图
+  if (shouldHideEmptyExif && !hasExifData) {
+    const canvas = document.createElement('canvas')
+    canvas.width = W
+    canvas.height = H
+    const c = canvas.getContext('2d')!
+    c.drawImage(image, 0, 0, W, H)
+    return canvas
+  }
+
   const barH = Math.round(ref * 0.06)
 
   const canvas = document.createElement('canvas')
@@ -815,12 +830,14 @@ function renderLeica({ image, exif, config, logo }: RenderCtx): HTMLCanvasElemen
   c.fillStyle = 'rgba(255,255,255,0.55)'
   c.fillText('CAMERA · WETZLAR', padX + dotR * 2.8, centerY + fontPx * 0.55)
 
-  // 右侧 EXIF 参数（右对齐）
-  c.textAlign = 'right'
-  c.fillStyle = config.textColor
-  c.font = `300 ${Math.round(fontPx * 0.8)}px ${f.mono}`
+  // 右侧 EXIF 参数（右对齐）— 仅在有内容时渲染
   const exifText = resolveCustomText(config.customText, formatExifLine(exif) || (exif.model ?? ''), exif, config)
-  c.fillText(exifText, W - padX, centerY)
+  if (exifText) {
+    c.textAlign = 'right'
+    c.fillStyle = config.textColor
+    c.font = `300 ${Math.round(fontPx * 0.8)}px ${f.mono}`
+    c.fillText(exifText, W - padX, centerY)
+  }
 
   return canvas
 }
@@ -833,6 +850,11 @@ function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
   const f = makeFontCtx(config, long)
   const ref = sizeRef(W, H)
   const displayFont = getFontStack(config.fontFamily)
+
+  // 检查是否有可显示的内容
+  const hasExifData = hasAnyExifData(exif) || config.customText
+  const shouldHideEmptyExif = config.hideEmptyExif !== false // 默认 true
+
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
@@ -840,13 +862,23 @@ function renderRedDot({ image, exif, config }: RenderCtx): HTMLCanvasElement {
 
   c.drawImage(image, 0, 0, W, H)
 
+  // 如果配置为隐藏空 EXIF 且无内容，直接返回原图
+  if (shouldHideEmptyExif && !hasExifData) {
+    return canvas
+  }
+
   const fontPx = Math.round(ref * config.fontSize / 100)
   const pad = Math.round(ref * 0.025)
   const dotR = Math.round(ref * 0.012)
 
-  // 半透明背景块（提升可读性）
+  // 半透明背景块（提升可读性）— 仅在有内容时绘制
   const exifText = resolveCustomText(config.customText, formatExifLine(exif) || (exif.model ?? ''), exif, config)
   const modelText = exif.model || ''
+  
+  if (!exifText && !modelText) {
+    return canvas // 无任何内容，不绘制背景块
+  }
+
   c.font = `300 ${fontPx}px ${f.mono}`
   const textW = Math.max(c.measureText(exifText).width, c.measureText(modelText).width, 60)
   const blockW = textW + dotR * 6 + pad * 1.2

@@ -256,3 +256,23 @@ export function cleanupText(text: string): string {
     .replace(/\s*·\s*/g, ' · ')   // · 两侧统一为「空格·空格」
     .trim()
 }
+
+/** 检测 EXIF 是否有任何有效数据 */
+export function hasAnyExifData(exif: {
+  make?: string
+  model?: string
+  lens?: string
+  focalLength?: number
+  fNumber?: number
+  exposureTime?: string
+  iso?: number
+  dateTaken?: string
+  gps?: { lat: number; lng: number }
+}): boolean {
+  return !!(
+    exif.make || exif.model || exif.lens ||
+    exif.focalLength || exif.fNumber ||
+    exif.exposureTime || exif.iso ||
+    exif.dateTaken || exif.gps
+  )
+}

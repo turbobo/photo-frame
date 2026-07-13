@@ -65,6 +65,7 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
     radius: 0,
     shadow: false,
     fontFamily: 'noto-serif',
+    hideEmptyExif: true, // 默认隐藏空EXIF参数栏
   }
   switch (id) {
     case 'minimal':

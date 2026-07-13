@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { PhotoData, TemplateConfig } from '../types'
 import { TEMPLATES, TEMPLATE_GROUPS, getDefaultConfig } from '../templates'
-import { FONT_FAMILIES, TEXT_VARIABLES, replaceTextVars, cleanupText } from '../utils/fonts'
+import { FONT_FAMILIES, TEXT_VARIABLES, replaceTextVars, cleanupText, hasAnyExifData } from '../utils/fonts'
 import { renderFrame } from '../utils/canvas'
 import {
   loadPresets, savePreset, deletePreset,
@@ -1378,6 +1378,8 @@ function TemplatePreview({ id }: { id: string }) {
 function InfoPanel({ photo }: { photo: PhotoData | null }) {
   if (!photo) return <EmptyState label="先上传一张照片" />
   const { exif, file, image } = photo
+  const hasExif = hasAnyExifData(exif)
+  
   const rows: Array<[string, string | undefined]> = [
     ['文件', file.name],
     ['尺寸', `${image.naturalWidth} × ${image.naturalHeight}`],
@@ -1391,8 +1393,14 @@ function InfoPanel({ photo }: { photo: PhotoData | null }) {
     ['时间', exif.dateTaken],
     ['GPS',  exif.gps ? `${exif.gps.lat.toFixed(4)}, ${exif.gps.lng.toFixed(4)}` : undefined],
   ]
+  
   return (
     <div className="p-5">
+      {!hasExif && (
+        <div className="mb-3 px-3 py-2 bg-surface-2 rounded border border-border text-[11px] text-text-2">
+          📱 数据来源：截图或无相机参数图片
+        </div>
+      )}
       <div className="space-y-2.5">
         {rows.map(([k, v]) => (
           <div key={k} className="flex items-baseline justify-between gap-3 text-[12px]">
