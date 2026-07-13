@@ -6,6 +6,7 @@ interface Props {
   templateName?: string
   format?: string
   quality?: number
+  failures?: Array<{ name: string; reason: string }>
 }
 
 export default function BatchProgressModal({
@@ -14,6 +15,7 @@ export default function BatchProgressModal({
   templateName,
   format,
   quality,
+  failures = [],
 }: Props) {
   const { current, total, currentName, completedCount, failedCount, startedAt } = progress
   const done = completedCount + failedCount
@@ -136,9 +138,20 @@ export default function BatchProgressModal({
           <div className="px-5 pb-4">
             <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
               <div className="font-medium mb-1">⚠️ {failedCount} 个文件处理失败</div>
-              <div className="text-[10px] text-amber-600">
-                可能原因：文件格式不支持、文件损坏、内存不足
-              </div>
+              {failures.length > 0 && (
+                <div className="mt-2 space-y-1.5 max-h-[160px] overflow-y-auto">
+                  {failures.map((f, idx) => (
+                    <div key={idx} className="border-t border-amber-200 pt-1.5 first:border-0 first:pt-0">
+                      <div className="font-mono text-[10px] font-medium text-amber-800 truncate" title={f.name}>
+                        {f.name}
+                      </div>
+                      <div className="text-[9px] text-amber-600 mt-0.5 break-words">
+                        {f.reason || '未知错误'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

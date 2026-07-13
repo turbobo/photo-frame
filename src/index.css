@@ -30,6 +30,23 @@
   --font-hand: 'LXGW WenKai Mono TC', 'STKaiti', 'Kaiti SC', cursive;
 }
 
+/* Font loading optimization */
+@font-face {
+  font-family: 'Noto Serif SC';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/notoserifsc/v13/nwpMtKy3O5VwT72hSjBm.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'LXGW WenKai Mono TC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(https://fonts.gstatic.com/s/lxgwwenkaimonotc/v1/c8fz.woff2) format('woff2');
+}
+
 * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
 
 html, body, #root {

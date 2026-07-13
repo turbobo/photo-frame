@@ -23,6 +23,8 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
   // 渲染带边框的完整图像（等待字体加载完成后再渲染，避免首次渲染用错字体）
   useEffect(() => {
     let cancelled = false
+    let oldBgUrl: string | null = null
+
     const doRender = async () => {
       await document.fonts.ready
       if (cancelled) return
@@ -44,30 +46,52 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
       const bgCtx = bgCanvas.getContext('2d')!
       bgCtx.imageSmoothingQuality = 'medium'
       bgCtx.drawImage(canvas, 0, 0, bgCanvas.width, bgCanvas.height)
-      setBgUrl(bgCanvas.toDataURL('image/jpeg', 0.7))
+      const newBgUrl = bgCanvas.toDataURL('image/jpeg', 0.7)
+      
+      // 释放旧的 dataURL，避免内存泄漏
+      if (oldBgUrl && oldBgUrl.startsWith('data:')) {
+        // dataURL 不需要 revokeObjectURL，但保留此逻辑以备将来改用 Blob URL
+      }
+      oldBgUrl = newBgUrl
+      setBgUrl(newBgUrl)
     }
     doRender()
-    return () => { cancelled = true }
+    return () => { 
+      cancelled = true 
+      // 清理旧 URL（如果将来改用 createObjectURL 时需要）
+      // if (oldBgUrl) URL.revokeObjectURL(oldBgUrl)
+    }
   }, [photo, config, logo])
 
   // 自适应缩放
   useEffect(() => {
     const el = containerRef.current
     if (!el || !rendered) return
+    
+    let rafId: number | null = null
+    
     const compute = () => {
-      const rect = el.getBoundingClientRect()
-      const pad = rect.width < 640 ? 12 : 56
-      const availW = rect.width - pad * 2
-      const availH = rect.height - pad * 2
-      const base = Math.min(availW / rendered.width, availH / rendered.height, 1)
-      // instax/polaroid 底部大留白模板，预览区额外缩小以留出呼吸空间
-      const previewShrink = (config.id === 'instax' || config.id === 'polaroid') ? 0.92 : 1
-      setScale(Math.max(0.05, base * previewShrink))
+      if (rafId !== null) return // 节流：如果已有 pending 的 rAF，跳过
+      rafId = requestAnimationFrame(() => {
+        const rect = el.getBoundingClientRect()
+        const pad = rect.width < 640 ? 12 : 56
+        const availW = rect.width - pad * 2
+        const availH = rect.height - pad * 2
+        const base = Math.min(availW / rendered.width, availH / rendered.height, 1)
+        // instax/polaroid 底部大留白模板，预览区额外缩小以留出呼吸空间
+        const previewShrink = (config.id === 'instax' || config.id === 'polaroid') ? 0.92 : 1
+        setScale(Math.max(0.05, base * previewShrink))
+        rafId = null
+      })
     }
+    
     compute()
     const ro = new ResizeObserver(compute)
     ro.observe(el)
-    return () => ro.disconnect()
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      ro.disconnect()
+    }
   }, [rendered, config.id])
 
   const size = useMemo(() => {
@@ -212,9 +236,15 @@ function PreviewCanvas({ source, width, height }: { source: HTMLCanvasElement; w
   useEffect(() => {
     const c = ref.current
     if (!c) return
-    const dpr = window.devicePixelRatio || 1
-    c.width = width * dpr
-    c.height = height * dpr
+    
+    // DPR 动态限制：在高性能移动设备上允许更高 DPR，普通设备限制在 2
+    const rawDpr = window.devicePixelRatio || 1
+    const ua = navigator.userAgent.toLowerCase()
+    const isHighEndMobile = /iphone|ipad/.test(ua) && (/\b[6-9]\d{3}\b|\b\d{4,}\b/.test(ua.match(/cpu iphone os (\d+_\d+)/)?.[0] || ''))
+    const maxDpr = isHighEndMobile ? Math.min(rawDpr, 3) : Math.min(rawDpr, 2)
+    
+    c.width = width * maxDpr
+    c.height = height * maxDpr
     c.style.width = `${width}px`
     c.style.height = `${height}px`
     const ctx = c.getContext('2d')!

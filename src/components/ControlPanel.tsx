@@ -111,6 +111,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
 
   // 批量导出状态
   const [batchProgress, setBatchProgress] = useState<BatchProgress | null>(null)
+  const [batchFailures, setBatchFailures] = useState<Array<{ name: string; reason: string }>>([])
   const [showBatchTip, setShowBatchTip] = useState(false)
   const batchAbortRef = useRef<AbortController | null>(null)
   const batchInputRef = useRef<HTMLInputElement>(null)
@@ -213,6 +214,11 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
         onProgress: setBatchProgress,
         signal: ac.signal,
       })
+
+      // 保存失败详情
+      if (result.failures.length > 0) {
+        setBatchFailures(result.failures)
+      }
 
       if (result.failedCount > 0) {
         setToast({
@@ -425,6 +431,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
           templateName={TEMPLATES.find(t => t.id === config.id)?.name}
           format={format}
           quality={quality}
+          failures={[]}
         />
       )}
 
