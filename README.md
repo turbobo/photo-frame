@@ -5,7 +5,7 @@
 ## 特性
 
 - 📷 **多格式**：JPG · PNG · WebP · HEIC · RAW（14 种主流相机）
-- 🎨 **13 种模板**：基础（极简/拍立得）· 品牌风（徕卡/红点/参数栏）· 胶片（Film/Dazz/Instax/复古）· 社交（Insta/小红书/杂志/地理）
+- 🎨 **21 种模板**：基础、品牌风、胶片、社交和特效五大类
 - 🏷 **自动识别**：EXIF 元数据 + 14 家相机品牌 Logo 自动匹配
 - ⚡ **实时预览**：< 50ms 重绘
 - 🚀 **秒级部署**：EdgeOne Pages 静态托管，免费额度足够个人使用
@@ -15,6 +15,7 @@
 ```bash
 npm install       # 安装依赖
 npm run dev       # 启动开发服务器（http://localhost:5173）
+npm run typecheck # 执行 TypeScript 静态检查
 npm run build     # 构建生产包（输出到 dist/）
 npm run preview   # 本地预览生产构建
 ```

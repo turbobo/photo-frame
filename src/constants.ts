@@ -204,6 +204,26 @@ export const MAX_DPR_NORMAL = 2
 export const MAX_DPR_HIGH_END_MOBILE = 3
 
 // ═══════════════════════════════════════════════════════
+// 上传限制
+// ═══════════════════════════════════════════════════════
+
+/** 单个图片文件最大体积（200 MiB，兼容高像素 RAW 文件） */
+export const MAX_UPLOAD_FILE_BYTES = 200 * 1024 * 1024
+
+/** 单个图片解码后的最大像素数，避免超大图耗尽浏览器内存 */
+export const MAX_DECODED_IMAGE_PIXELS = 60_000_000
+
+/** 单个图片允许的最大边长，兼容主流浏览器 Canvas 限制 */
+export const MAX_DECODED_IMAGE_EDGE = 12_000
+
+/** 支持的图片扩展名 */
+export const SUPPORTED_IMAGE_EXTENSIONS = new Set([
+  'jpg', 'jpeg', 'png', 'webp', 'avif', 'gif',
+  'heic', 'heif', 'cr2', 'cr3', 'nef', 'arw', 'sr2',
+  'raf', 'rw2', 'orf', 'pef', 'dng', 'rwl',
+])
+
+// ═══════════════════════════════════════════════════════
 // 批量导出限制
 // ═══════════════════════════════════════════════════════
 

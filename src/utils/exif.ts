@@ -3,6 +3,12 @@
 // 策略：exifr 一次性提取 EXIF 元数据 + 内嵌 JPEG 预览图
 
 import type { ExifData } from '../types'
+import {
+  MAX_DECODED_IMAGE_EDGE,
+  MAX_DECODED_IMAGE_PIXELS,
+  MAX_UPLOAD_FILE_BYTES,
+  SUPPORTED_IMAGE_EXTENSIONS,
+} from '../constants'
 // 静态导入 exifr：避免 EdgeOne 部署下 dynamic import chunk fetch 失败
 // 代价：增加主 bundle ~75KB (gzipped ~26KB)，换取 100% 加载可靠性
 import * as exifr from 'exifr'
@@ -16,9 +22,36 @@ export function isRawFile(file: File): boolean {
   return !!ext && RAW_EXTENSIONS.includes(ext)
 }
 
+/** 在读取文件前校验格式和体积，避免无效或超大文件耗尽浏览器内存 */
+export function validateImageFile(file: File): void {
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (!ext || !SUPPORTED_IMAGE_EXTENSIONS.has(ext)) {
+    throw new Error('不支持的图像格式')
+  }
+  if (file.size === 0) {
+    throw new Error('图片文件为空')
+  }
+  if (file.size > MAX_UPLOAD_FILE_BYTES) {
+    throw new Error('图片不能超过 200 MB')
+  }
+}
+
 /** 判断是否为浏览器可原生渲染的图像 */
 export function isNativeImage(file: File): boolean {
   return /^image\/(jpeg|jpg|png|webp|avif|gif)$/i.test(file.type)
+}
+
+/** 校验解码后的图片尺寸，避免 Canvas 分配导致浏览器崩溃 */
+export function validateDecodedImageDimensions(width: number, height: number): void {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    throw new Error('无法读取图片尺寸')
+  }
+  if (width > MAX_DECODED_IMAGE_EDGE || height > MAX_DECODED_IMAGE_EDGE) {
+    throw new Error(`图片边长不能超过 ${MAX_DECODED_IMAGE_EDGE} 像素`)
+  }
+  if (width * height > MAX_DECODED_IMAGE_PIXELS) {
+    throw new Error('图片像素过高，请先缩小至 6000 万像素以内')
+  }
 }
 
 /** 从 File 创建 HTMLImageElement */
@@ -27,8 +60,14 @@ async function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => {
-      // 保留 URL 直到 image 使用完（组件卸载时释放）
-      resolve(img)
+      URL.revokeObjectURL(url)
+      try {
+        validateDecodedImageDimensions(img.naturalWidth, img.naturalHeight)
+        resolve(img)
+      } catch (error) {
+        img.src = ''
+        reject(error)
+      }
     }
     img.onerror = () => {
       URL.revokeObjectURL(url)
@@ -44,6 +83,7 @@ async function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
  * - JPG/PNG/WEBP → 直接加载
  */
 export async function loadImage(file: File): Promise<HTMLImageElement> {
+  validateImageFile(file)
   if (isNativeImage(file)) {
     return loadImageFromBlob(file)
   }

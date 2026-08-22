@@ -1,6 +1,6 @@
 import { Zip, ZipPassThrough } from 'fflate'
 import type { TemplateConfig } from '../types'
-import { loadImage, extractExif } from './exif'
+import { loadImage, extractExif, validateImageFile } from './exif'
 import { getLogoPath, loadLogo } from './logos'
 import { renderFrame } from './canvas'
 
@@ -27,6 +27,7 @@ export interface BatchResult {
   completedCount: number
   failedCount: number
   failures: Array<{ name: string; reason: string }>
+  cancelled: boolean
 }
 
 const MIME_MAP: Record<string, string> = {
@@ -40,7 +41,7 @@ export function detectDeviceLimit(): number {
   const isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   if (isIOS) return 20
 
-  const mem = (navigator as any).deviceMemory as number | undefined
+  const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
   if (mem !== undefined && mem < 2) return 20
 
   const isAndroid = /Android/.test(ua)
@@ -52,48 +53,54 @@ export function detectDeviceLimit(): number {
 async function renderOnePhoto(
   file: File,
   config: TemplateConfig,
-  format: string,
+  format: BatchExportParams['format'],
   quality: number,
   longEdge: number,
 ): Promise<Blob> {
+  validateImageFile(file)
   const [image, exif] = await Promise.all([loadImage(file), extractExif(file)])
+  let source: HTMLCanvasElement | null = null
+  let target: HTMLCanvasElement | null = null
 
-  let logo: HTMLImageElement | null = null
-  const logoPath = getLogoPath(exif.make)
-  if (logoPath) {
-    try { logo = await loadLogo(logoPath) } catch { /* ignore */ }
+  try {
+    let logo: HTMLImageElement | null = null
+    const logoPath = getLogoPath(exif.make)
+    if (logoPath) {
+      try { logo = await loadLogo(logoPath) } catch { /* 无 Logo 时继续导出 */ }
+    }
+
+    source = renderFrame({ image, exif, logo, config })
+    target = source
+    if (longEdge > 0 && Math.max(source.width, source.height) > longEdge) {
+      const scale = longEdge / Math.max(source.width, source.height)
+      const resizedCanvas = document.createElement('canvas')
+      resizedCanvas.width = Math.round(source.width * scale)
+      resizedCanvas.height = Math.round(source.height * scale)
+      const context = resizedCanvas.getContext('2d')
+      if (!context) throw new Error('无法创建 Canvas 上下文')
+      context.imageSmoothingQuality = 'high'
+      context.drawImage(source, 0, 0, resizedCanvas.width, resizedCanvas.height)
+      target = resizedCanvas
+    }
+
+    const mime = MIME_MAP[format] || 'image/jpeg'
+    return await new Promise<Blob>((resolve, reject) => {
+      target!.toBlob(
+        blob => (blob ? resolve(blob) : reject(new Error('图片编码失败'))),
+        mime,
+        quality,
+      )
+    })
+  } finally {
+    if (target && target !== source) {
+      target.width = 0
+      target.height = 0
+    }
+    if (source) {
+      source.width = 0
+      source.height = 0
+    }
   }
-
-  const source = renderFrame({ image, exif, logo, config })
-
-  let target = source
-  if (longEdge > 0 && Math.max(source.width, source.height) > longEdge) {
-    const s = longEdge / Math.max(source.width, source.height)
-    const c = document.createElement('canvas')
-    c.width = Math.round(source.width * s)
-    c.height = Math.round(source.height * s)
-    const ctx = c.getContext('2d')!
-    ctx.imageSmoothingQuality = 'high'
-    ctx.drawImage(source, 0, 0, c.width, c.height)
-    source.width = 0
-    source.height = 0
-    target = c
-  }
-
-  const mime = MIME_MAP[format] || 'image/jpeg'
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    target.toBlob(
-      b => (b ? resolve(b) : reject(new Error('toBlob failed'))),
-      mime,
-      quality,
-    )
-  })
-
-  target.width = 0
-  target.height = 0
-  URL.revokeObjectURL(image.src)
-
-  return blob
 }
 
 export async function runBatchExport(params: BatchExportParams): Promise<BatchResult> {
@@ -110,54 +117,69 @@ export async function runBatchExport(params: BatchExportParams): Promise<BatchRe
   const startedAt = Date.now()
 
   const chunks: Uint8Array[] = []
-  const zip = new Zip((err, data, final) => {
-    if (err) throw err
-    chunks.push(data)
-  })
-
-  for (let i = 0; i < files.length; i++) {
-    if (signal.aborted) break
-
-    const file = files[i]
-    onProgress({
-      current: i + 1,
-      total: files.length,
-      currentName: file.name,
-      completedCount,
-      failedCount,
-      startedAt,
+  const zipCompleted = new Promise<void>((resolve, reject) => {
+    const zip = new Zip((error, data, final) => {
+      if (error) {
+        reject(error)
+        return
+      }
+      chunks.push(data)
+      if (final) resolve()
     })
 
-    try {
-      const blob = await renderOnePhoto(file, config, format, quality, longEdge)
-      const arrayBuf = await blob.arrayBuffer()
-      const data = new Uint8Array(arrayBuf)
+    processFiles(zip).catch(reject)
+  })
 
-      const baseName = file.name.replace(/\.[^.]+$/, '')
-      const fileName = `${baseName}-${templateId}.${ext}`
+  async function processFiles(zip: Zip): Promise<void> {
+    for (let i = 0; i < files.length; i++) {
+      if (signal.aborted) break
 
-      const entry = new ZipPassThrough(fileName)
-      zip.add(entry)
-      entry.push(data, true)
+      const file = files[i]
+      onProgress({
+        current: i + 1,
+        total: files.length,
+        currentName: file.name,
+        completedCount,
+        failedCount,
+        startedAt,
+      })
 
-      completedCount++
-    } catch (e: any) {
-      failedCount++
-      failures.push({ name: file.name, reason: e?.message || String(e) })
+      try {
+        const blob = await renderOnePhoto(file, config, format, quality, longEdge)
+        const data = new Uint8Array(await blob.arrayBuffer())
+        const baseName = file.name.replace(/\.[^.]+$/, '')
+        const fileName = `${baseName}-${templateId}-${i + 1}.${ext}`
+
+        const entry = new ZipPassThrough(fileName)
+        zip.add(entry)
+        entry.push(data, true)
+        completedCount++
+      } catch (error: unknown) {
+        failedCount++
+        failures.push({
+          name: file.name,
+          reason: error instanceof Error ? error.message : String(error),
+        })
+      }
+
+      if (!signal.aborted) {
+        onProgress({
+          current: i + 1,
+          total: files.length,
+          currentName: file.name,
+          completedCount,
+          failedCount,
+          startedAt,
+        })
+      }
     }
+
+    zip.end()
   }
 
-  zip.end()
+  await zipCompleted
 
-  if (completedCount > 0) {
-    const totalSize = chunks.reduce((s, c) => s + c.length, 0)
-    const merged = new Uint8Array(totalSize)
-    let offset = 0
-    for (const chunk of chunks) {
-      merged.set(chunk, offset)
-      offset += chunk.length
-    }
-
+  if (!signal.aborted && completedCount > 0) {
     const now = new Date()
     const ts = [
       now.getFullYear(),
@@ -170,7 +192,7 @@ export async function runBatchExport(params: BatchExportParams): Promise<BatchRe
     ].join('')
     const zipName = `framelet-batch-${ts}.zip`
 
-    const zipBlob = new Blob([merged], { type: 'application/zip' })
+    const zipBlob = new Blob(chunks, { type: 'application/zip' })
     const url = URL.createObjectURL(zipBlob)
     const a = document.createElement('a')
     a.href = url
@@ -184,5 +206,5 @@ export async function runBatchExport(params: BatchExportParams): Promise<BatchRe
     }, 100)
   }
 
-  return { completedCount, failedCount, failures }
+  return { completedCount, failedCount, failures, cancelled: signal.aborted }
 }

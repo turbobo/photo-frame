@@ -128,6 +128,9 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
       {/* 主图（前景）—— 细边框 + 柔阴影，像真实相框 */}
       {rendered && (
         <div
+          role={isMobile ? 'button' : undefined}
+          tabIndex={isMobile ? 0 : undefined}
+          aria-label={isMobile ? '打开照片全屏预览' : undefined}
           className="relative fade-in rounded-md z-10 ring-1 ring-black/5"
           style={{
             width: size.w,
@@ -136,6 +139,12 @@ export default function PhotoPreview({ photo, config, logo, onReplace, onClear }
             cursor: isMobile ? 'zoom-in' : 'default',
           }}
           onClick={() => { if (isMobile) setFullscreenOpen(true) }}
+          onKeyDown={event => {
+            if (isMobile && (event.key === 'Enter' || event.key === ' ')) {
+              event.preventDefault()
+              setFullscreenOpen(true)
+            }
+          }}
         >
           <PreviewCanvas source={rendered} width={size.w} height={size.h} />
           {isMobile && (

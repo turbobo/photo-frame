@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { PhotoData, TemplateConfig } from './types'
-import { loadImage, extractExif } from './utils/exif'
+import { loadImage, extractExif, validateImageFile } from './utils/exif'
 import { getLogoPath, loadLogo } from './utils/logos'
 import { getDefaultConfig, TEMPLATES } from './templates'
 import PhotoUploader from './components/PhotoUploader'
@@ -14,34 +14,50 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activePresetName, setActivePresetName] = useState<string | null>(null)
+  const loadRequestIdRef = useRef(0)
 
   const handleFileSelect = useCallback(async (file: File) => {
+    const requestId = ++loadRequestIdRef.current
     setLoading(true)
     setError(null)
     try {
+      validateImageFile(file)
       const [image, exif] = await Promise.all([loadImage(file), extractExif(file)])
+      if (requestId !== loadRequestIdRef.current) return
+
       setPhoto({ file, image, exif, originalName: file.name })
+      setLogo(null)
 
       const logoPath = getLogoPath(exif.make)
       if (logoPath) {
         try {
-          const l = await loadLogo(logoPath)
-          setLogo(l)
-        } catch { setLogo(null) }
-      } else {
-        setLogo(null)
+          const loadedLogo = await loadLogo(logoPath)
+          if (requestId === loadRequestIdRef.current) setLogo(loadedLogo)
+        } catch {
+          if (requestId === loadRequestIdRef.current) setLogo(null)
+        }
       }
-    } catch (e: any) {
-      setError(e?.message || '加载失败')
+    } catch (error: unknown) {
+      if (requestId === loadRequestIdRef.current) {
+        setError(error instanceof Error ? error.message : '加载失败')
+      }
     } finally {
-      setLoading(false)
+      if (requestId === loadRequestIdRef.current) setLoading(false)
     }
   }, [])
 
   const handleClear = useCallback(() => {
+    loadRequestIdRef.current++
     setPhoto(null)
     setLogo(null)
     setError(null)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      loadRequestIdRef.current++
+    }
   }, [])
 
   useEffect(() => {

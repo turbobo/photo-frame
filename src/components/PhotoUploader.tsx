@@ -36,7 +36,16 @@ export default function PhotoUploader({ onFileSelect, loading, error }: Props) {
       onDrop={handleDrop}
     >
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="选择要添加边框的照片"
         onClick={() => inputRef.current?.click()}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            inputRef.current?.click()
+          }
+        }}
         className={`relative w-full max-w-xl aspect-[4/3] rounded-xl bg-surface border border-dashed border-border-strong
           flex flex-col items-center justify-center gap-6 cursor-pointer
           ${dragOver ? 'dropzone-active' : ''}`}

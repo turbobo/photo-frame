@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import type { PhotoData, TemplateConfig } from '../types'
 import { TEMPLATES, TEMPLATE_GROUPS, getDefaultConfig } from '../templates'
 import { FONT_FAMILIES, TEXT_VARIABLES, replaceTextVars, cleanupText, hasAnyExifData } from '../utils/fonts'
@@ -60,11 +60,38 @@ function InlineDialog({ title, children, onClose }: {
   children: React.ReactNode
   onClose: () => void
 }) {
+  const titleId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null
+    const dialog = dialogRef.current
+    const focusable = dialog?.querySelector<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    focusable?.focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCloseRef.current()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      previousFocus?.focus()
+    }
+  }, [])
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4" onClick={onClose}>
-      <div className="bg-surface rounded-xl shadow-elev border border-border w-full max-w-[320px] overflow-hidden" onClick={e => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-surface rounded-xl shadow-elev border border-border w-full max-w-[320px] overflow-hidden"
+        onClick={e => e.stopPropagation()}>
         <div className="px-5 pt-4 pb-3 border-b border-border">
-          <h3 className="text-[14px] font-semibold text-text">{title}</h3>
+          <h3 id={titleId} className="text-[14px] font-semibold text-text">{title}</h3>
         </div>
         <div className="px-5 py-4">{children}</div>
       </div>
@@ -187,6 +214,11 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
     onPresetDeactivate?.()
   }
 
+  const handleBatchModalClose = useCallback(() => {
+    batchAbortRef.current?.abort()
+    setBatchProgress(null)
+  }, [])
+
   const handleBatchExport = async (files: File[]) => {
     if (!files.length) return
     const limit = detectDeviceLimit()
@@ -199,6 +231,7 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
     batchAbortRef.current = ac
     const longEdge = SIZE_OPTIONS.find(o => o.key === size)?.longEdge ?? 0
 
+    setBatchFailures([])
     setBatchProgress({
       current: 0, total: capped.length, currentName: '',
       completedCount: 0, failedCount: 0, startedAt: Date.now(),
@@ -215,25 +248,38 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
         signal: ac.signal,
       })
 
-      // 保存失败详情
-      if (result.failures.length > 0) {
-        setBatchFailures(result.failures)
-      }
+      setBatchFailures(result.failures)
 
-      if (result.failedCount > 0) {
+      if (result.cancelled) {
+        setBatchProgress(null)
         setToast({
-          message: `批量导出完成：${result.completedCount} 成功，${result.failedCount} 失败`,
-          type: 'error',
+          message: `批量导出已取消：已处理 ${result.completedCount} 成功，${result.failedCount} 失败，未生成 ZIP`,
+          type: 'info',
         })
+      } else {
+        setBatchProgress(previous => previous ? {
+          ...previous,
+          current: capped.length,
+          currentName: '',
+          completedCount: result.completedCount,
+          failedCount: result.failedCount,
+        } : null)
+
+        if (result.failedCount > 0) {
+          setToast({
+            message: `批量导出完成：${result.completedCount} 成功，${result.failedCount} 失败`,
+            type: 'error',
+          })
+        }
       }
     } catch (err) {
+      setBatchProgress(null)
       console.error('batch export failed:', err)
       setToast({
         message: `批量导出失败: ${err instanceof Error ? err.message : String(err)}`,
         type: 'error',
       })
     } finally {
-      setBatchProgress(null)
       batchAbortRef.current = null
     }
   }
@@ -251,13 +297,20 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
         const c = document.createElement('canvas')
         c.width = Math.round(source.width * s)
         c.height = Math.round(source.height * s)
-        const ctx = c.getContext('2d')!
-        ctx.imageSmoothingQuality = 'high'
-        ctx.drawImage(source, 0, 0, c.width, c.height)
+        const context = c.getContext('2d')
+        if (!context) throw new Error('无法创建 Canvas 上下文')
+        context.imageSmoothingQuality = 'high'
+        context.drawImage(source, 0, 0, c.width, c.height)
         target = c
       }
       const mime = FORMATS.find(f => f.key === format)!.mime
-      const blob = await new Promise<Blob | null>(r => target.toBlob(r, mime, quality))
+      const blob = await new Promise<Blob | null>(resolve => target.toBlob(resolve, mime, quality))
+      if (target !== source) {
+        target.width = 0
+        target.height = 0
+      }
+      source.width = 0
+      source.height = 0
       if (!blob) {
         setToast({ message: '生成图片失败，请重试', type: 'error' })
         return
@@ -424,14 +477,11 @@ export default function ControlPanel({ photo, config, onChange, logo, loading, o
       {batchProgress && (
         <BatchProgressModal
           progress={batchProgress}
-          onCancel={() => {
-            batchAbortRef.current?.abort()
-            setBatchProgress(null)
-          }}
+          onCancel={handleBatchModalClose}
           templateName={TEMPLATES.find(t => t.id === config.id)?.name}
           format={format}
           quality={quality}
-          failures={[]}
+          failures={batchFailures}
         />
       )}
 

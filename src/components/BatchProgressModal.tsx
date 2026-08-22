@@ -1,3 +1,4 @@
+import { useEffect, useId, useRef } from 'react'
 import type { BatchProgress } from '../utils/batchExport'
 
 interface Props {
@@ -17,7 +18,18 @@ export default function BatchProgressModal({
   quality,
   failures = [],
 }: Props) {
+  const titleId = useId()
+  const actionRef = useRef<HTMLButtonElement>(null)
   const { current, total, currentName, completedCount, failedCount, startedAt } = progress
+
+  useEffect(() => {
+    actionRef.current?.focus()
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCancel()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onCancel])
   const done = completedCount + failedCount
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
   const isComplete = done >= total && total > 0
@@ -33,7 +45,11 @@ export default function BatchProgressModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-      <div className="bg-surface rounded-xl shadow-elev border border-border w-full max-w-[360px] overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-surface rounded-xl shadow-elev border border-border w-full max-w-[360px] overflow-hidden">
         {/* 头部：标题 + 当前文件 */}
         <div className="px-5 pt-5 pb-4 border-b border-border">
           <div className="flex items-center justify-between">
@@ -56,7 +72,7 @@ export default function BatchProgressModal({
                   </svg>
                 </div>
               )}
-              <h3 className="text-[14px] font-semibold text-text">
+              <h3 id={titleId} className="text-[14px] font-semibold text-text">
                 {isComplete
                   ? failedCount === 0
                     ? '导出完成'
@@ -77,7 +93,13 @@ export default function BatchProgressModal({
 
         {/* 进度条 */}
         <div className="px-5 py-4">
-          <div className="w-full bg-border rounded-full h-1.5 overflow-hidden">
+          <div
+            role="progressbar"
+            aria-label="批量导出进度"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={pct}
+            className="w-full bg-border rounded-full h-1.5 overflow-hidden">
             <div
               className={`h-full rounded-full transition-[width] duration-300 ease-out ${
                 isComplete
@@ -159,6 +181,7 @@ export default function BatchProgressModal({
         {/* 操作按钮 */}
         <div className="px-5 pb-5">
           <button
+            ref={actionRef}
             onClick={onCancel}
             className={`w-full py-2 rounded-lg text-[12px] font-medium transition-colors ${
               isComplete

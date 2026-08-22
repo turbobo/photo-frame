@@ -61,6 +61,14 @@ export default function FullscreenPreview({ rendered, onClose }: Props) {
     fadeTimerRef.current = setTimeout(onClose, 150)
   }, [onClose])
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') handleClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [handleClose])
+
   useEffect(() => () => clearTimeout(fadeTimerRef.current), [])
 
   const clampOffset = useCallback((ox: number, oy: number, z: number) => {
@@ -176,6 +184,9 @@ export default function FullscreenPreview({ rendered, onClose }: Props) {
 
   return createPortal(
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="照片全屏预览"
       style={{
         position: 'fixed',
         inset: 0,
