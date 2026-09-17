@@ -69,9 +69,9 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
   }
   switch (id) {
     case 'minimal':
-      return { ...base, padding: 3, bgColor: '#ffffff', textColor: '#333', shadow: true }
+      return { ...base, padding: 3, bgColor: '#ffffff', textColor: '#333333', shadow: true }
     case 'polaroid':
-      return { ...base, padding: 6, bgColor: '#fefdf7', textColor: '#333', fontSize: 2.5, showLogo: false, showExif: false, shadow: true }
+      return { ...base, padding: 6, bgColor: '#fefdf7', textColor: '#333333', fontSize: 2.5, showLogo: false, showExif: false, shadow: true }
     case 'light-shadow':
       return {
         ...base,
@@ -79,7 +79,7 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
         bgColor: '#000000',
         textColor: '#ffffff',
         fontSize: 1.2,
-        showLogo: false,
+        showLogo: true,   // 品牌标识区（品牌 + 型号），不实际绘制 Logo 图
         showExif: true,
         shadow: false,
       }
@@ -88,21 +88,31 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
     case 'exif':
       return { ...base, padding: 0, bgColor: '#111111', textColor: '#f5f5f5', fontSize: 1.8, logoSize: 5 }
     case 'insta':
-      return { ...base, padding: 5, bgColor: '#ffffff', textColor: '#111', radius: 24, shadow: true, fontSize: 2 }
+      return { ...base, padding: 5, bgColor: '#ffffff', textColor: '#111111', radius: 24, shadow: true, fontSize: 2 }
     case 'leica':
       return { ...base, padding: 0, bgColor: '#111111', textColor: '#ffffff', fontSize: 1.6, logoSize: 3 }
     case 'red-dot':
-      return { ...base, padding: 0, bgColor: 'transparent', textColor: '#ffffff', showLogo: false, fontSize: 1.6 }
+      // 悬浮类模板不扩画布，bgColor 不参与渲染，保留合法 6 位十六进制以满足颜色控件
+      return { ...base, padding: 0, bgColor: '#000000', textColor: '#ffffff', showLogo: false, fontSize: 1.6 }
     case 'dazz':
       return { ...base, padding: 10, bgColor: '#0a0a0a', textColor: '#ffcc33', showLogo: false, fontSize: 1.6 }
     case 'instax':
-      return { ...base, padding: 6, bgColor: '#fefdf7', textColor: '#333', fontSize: 2.8, showLogo: false, showExif: false, shadow: true }
+      return { ...base, padding: 6, bgColor: '#fefdf7', textColor: '#333333', fontSize: 2.8, showLogo: false, showExif: false, shadow: true }
     case 'xhs':
-      return { ...base, padding: 4, bgColor: '#ffffff', textColor: '#1a1a1a', radius: 12, shadow: true, fontSize: 2.2 }
+      return {
+        ...base,
+        padding: 4,
+        bgColor: '#ffffff',
+        textColor: '#1a1a1a',
+        radius: 12,
+        shadow: true,
+        fontSize: 2.2,
+        xhsImageFit: 'cover',   // 封面默认填满 3:4
+      }
     case 'vintage':
       return { ...base, padding: 8, bgColor: '#d4b896', textColor: '#4a3728', fontSize: 2.2, showLogo: false, showExif: false }
     case 'magazine':
-      return { ...base, padding: 0, bgColor: '#ffffff', textColor: '#111', fontSize: 2.5, showLogo: false }
+      return { ...base, padding: 0, bgColor: '#ffffff', textColor: '#111111', fontSize: 2.5, showLogo: false }
     case 'location':
       return { ...base, padding: 0, bgColor: '#111111', textColor: '#ffffff', fontSize: 1.6, logoSize: 4 }
     case 'frameless-rounded':
@@ -177,7 +187,7 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
       return {
         ...base,
         padding: 0,
-        bgColor: 'transparent',
+        bgColor: '#000000',
         textColor: '#ffffff',
         fontSize: 1.4,
         showLogo: true,
@@ -191,7 +201,7 @@ export function getDefaultConfig(id: TemplateId): TemplateConfig {
       return {
         ...base,
         padding: 0,
-        bgColor: 'transparent',
+        bgColor: '#000000',
         textColor: '#ffffff',
         fontSize: 1.8,
         showLogo: false,

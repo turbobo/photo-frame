@@ -890,6 +890,8 @@ function StylePanel({
             fontFamily: config.fontFamily,
             locationName: config.locationName,
             copyright: config.copyright,
+            magazineName: config.magazineName,
+            magazineIssue: config.magazineIssue,
           })
         }} />
       </section>
@@ -989,6 +991,49 @@ function StylePanel({
             aria-label="地点名称"
             className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast"/>
         </section>
+      )}
+
+      {/* XHS: 封面填充方式（输出固定 3:4） */}
+      {config.id === 'xhs' && (
+        <section>
+          <SectionLabel>封面填充</SectionLabel>
+          <div className="segment w-full" role="radiogroup" aria-label="封面图片填充方式">
+            <button role="radio" aria-checked={(config.xhsImageFit ?? 'cover') === 'cover'}
+              data-active={(config.xhsImageFit ?? 'cover') === 'cover'}
+              onClick={() => onChange({ xhsImageFit: 'cover' })}
+              className="flex-1">填满裁切</button>
+            <button role="radio" aria-checked={config.xhsImageFit === 'contain'}
+              data-active={config.xhsImageFit === 'contain'}
+              onClick={() => onChange({ xhsImageFit: 'contain' })}
+              className="flex-1">完整保留</button>
+          </div>
+        </section>
+      )}
+
+      {/* Magazine: 刊名 + 期号 */}
+      {config.id === 'magazine' && (
+        <>
+          <section>
+            <SectionLabel>刊名</SectionLabel>
+            <input
+              type="text"
+              value={config.magazineName || ''}
+              onChange={e => onChange({ magazineName: e.target.value })}
+              placeholder="默认 PHOTO ZINE"
+              aria-label="杂志刊名"
+              className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast"/>
+          </section>
+          <section>
+            <SectionLabel>期号</SectionLabel>
+            <input
+              type="text"
+              value={config.magazineIssue || ''}
+              onChange={e => onChange({ magazineIssue: e.target.value })}
+              placeholder="默认取照片日期后四位"
+              aria-label="杂志期号"
+              className="w-full px-3 py-2 bg-canvas border border-border rounded-md text-[12px] text-text placeholder:text-text-3 outline-none focus:border-accent transition-colors duration-fast"/>
+          </section>
+        </>
       )}
 
       {/* Vintage-photo: timestamp position + color */}
@@ -1274,7 +1319,7 @@ function TemplatePreview({ id }: { id: string }) {
       )
     case 'xhs':
       return (
-        <div className="w-9 h-11 bg-white rounded-md shadow-md flex flex-col p-0.5">
+        <div className="w-9 h-12 bg-white rounded-md shadow-md flex flex-col p-0.5">
           <div className="flex items-center gap-0.5 mb-0.5">
             <div className="w-1.5 h-1.5 rounded-sm bg-red-500"/>
             <div className="text-[3px] text-text-3">小红书笔记</div>

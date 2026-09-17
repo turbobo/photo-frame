@@ -92,6 +92,44 @@ export const BG_MASK_COLOR = '#fafaf9'
 /** Leica 红点颜色 */
 export const LEICA_RED = '#e60012'
 
+/** 阴影基色（暖棕黑），所有投影与压暗层由此派生 */
+export const SHADOW_HEX = '#1c1917'
+
+/** 卡片三层阴影不透明度（大半径→小半径，叠加出柔和层次） */
+export const CARD_SHADOW_ALPHA = [0.08, 0.12, 0.15] as const
+
+/** 图片悬浮阴影不透明度（无框圆角 / 白色边框） */
+export const IMAGE_SHADOW_ALPHA = 0.22
+
+/** 图片悬浮阴影模糊系数（相对于长边） */
+export const IMAGE_SHADOW_BLUR_RATIO = 0.03
+
+/** 图片悬浮阴影垂直偏移系数（相对于长边） */
+export const IMAGE_SHADOW_OFFSET_RATIO = 0.012
+
+// ═══════════════════════════════════════════════════════
+// 材质纹理
+// ═══════════════════════════════════════════════════════
+
+/** 复古牛皮纸颗粒参数 */
+export const VINTAGE_GRAIN = {
+  step: 9,
+  density: 0.4,
+  size: 3,
+  alpha: 0.08,
+} as const
+
+/** 亚克力噪点参数 */
+export const ACRYLIC_GRAIN = {
+  step: 4,
+  density: 0.003,
+  size: 1,
+  alpha: 0.06,
+} as const
+
+/** 小红书封面目标宽高比（3:4） */
+export const XHS_COVER_RATIO = 3 / 4
+
 // ═══════════════════════════════════════════════════════
 // 齿孔与胶片元素
 // ═══════════════════════════════════════════════════════

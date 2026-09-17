@@ -56,9 +56,17 @@ export interface TemplateConfig {
   watermarkText?: string     // 水印文本（默认 customText 或 "Framelet"）
   watermarkAngle?: number    // 旋转角度 -45~45 度（默认 -22）
   watermarkDensity?: number  // 密度 0.5~3（默认 1，越大越密）
-  watermarkOpacity?: number  // 0-1（默认 0.18）
+  watermarkOpacity?: number   // 0-1（默认 0.18）
+  // 小红书封面（xhs）
+  xhsImageFit?: ImageFitMode // 图片填充方式（默认 cover 填满 3:4 封面）
+  // 杂志封面（magazine）
+  magazineName?: string      // 刊名（默认 PHOTO ZINE）
+  magazineIssue?: string     // 期号（默认取日期后四位）
   hideEmptyExif?: boolean    // 无 EXIF 时隐藏参数栏（默认 true）
 }
+
+/** 图片在固定比例内容框内的填充方式 */
+export type ImageFitMode = 'contain' | 'cover'
 
 export interface PhotoData {
   file: File
